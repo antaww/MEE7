@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from src.ft.ft1.recommandations import analyze_and_recommend
 from src.tests.tests import scheduled_hi
 
+from src.utilities.utilities import setup_commands
+
 # Charger les variables d'environnement depuis le fichier .env
 load_dotenv()
 
@@ -47,6 +49,9 @@ async def recommend(ctx, channel_id: discord.Option(discord.SlashCommandOptionTy
             await ctx.respond("Channel not found for analysis.")
     else:
         await ctx.respond("Invalid channel ID.")
+
+
+setup_commands(bot)
 
 
 bot.run(DISCORD_BOT_TOKEN)
