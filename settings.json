@@ -1,4 +1,11 @@
 {
   "recommendations_channel_id": 1252372091878113432,
-  "twitch_channel_id": 1252372530736664586
+  "twitch_channel_id": 1252372530736664586,
+  "streamers_list": [
+    "nikof",
+    "alphacast",
+    "fugu_fps",
+    "kaydop",
+    "aminematue"
+  ]
 }
