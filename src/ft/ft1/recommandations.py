@@ -1,6 +1,7 @@
 import os
 import textrazor
 
+
 async def analyze_and_recommend(bot, channel_id):
     # Logic pour analyser les messages récents et recommander du contenu
     # Ici, nous utiliserons Textrazor pour analyser le contenu des messages.
