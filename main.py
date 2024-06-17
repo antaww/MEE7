@@ -5,6 +5,7 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 
 from src.ft.ft1.recommandations import analyze_and_recommend
+from src.tests.tests import scheduled_hi
 
 # Charger les variables d'environnement depuis le fichier .env
 load_dotenv()
@@ -16,12 +17,9 @@ bot = discord.Bot()
 
 @bot.event
 async def on_ready():
-    print(f'Bot connecté en tant que {bot.user}')
-
-
-@bot.command(name="hi", description="Says hi")
-async def say_hi(ctx):
-    await ctx.respond(f"Hi, {ctx.author.mention}!")
+    print(f'Bot is ready. Logged in as {bot.user}')
+    scheduled_recommendation.start()
+    scheduled_hi.start(bot)
 
 
 # Tâche planifiée pour exécuter l'analyse et la recommandation toutes les X heures
@@ -31,6 +29,7 @@ async def scheduled_recommendation():
 
     # Récupérer le channel Discord
     channel = bot.get_channel(channel_id)
+    print(f"Analyzing and recommending content in {channel.name}")
     if channel:
         recommendation = await analyze_and_recommend(bot, channel_id)
         await channel.send(recommendation)

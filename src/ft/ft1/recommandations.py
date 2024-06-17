@@ -12,7 +12,6 @@ async def analyze_and_recommend(bot, channel_id):
     # Récupérer les messages récents dans un canal spécifique (par exemple)
     channel = bot.get_channel(channel_id)
     messages = await channel.history(limit=100).flatten()  # Récupérer les 100 derniers messages
-    print(messages)
 
     content = "\n".join([message.content for message in messages])
 
