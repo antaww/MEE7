@@ -24,7 +24,7 @@ async def analyze_and_recommend(bot, channel_id):
     if topics:
         recommendation = f"Here are some recommendations based on recent discussions in {channel.name}:"
         for topic in topics[:3]:  # Limiter à trois topics pour la recommandation
-            recommendation += f"\n- {topic}"
+            recommendation += f"\n> - **{topic}**"
 
         return recommendation
     else:
