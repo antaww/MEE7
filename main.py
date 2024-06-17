@@ -6,12 +6,14 @@ from dotenv import load_dotenv
 
 from src.ft.ft1.recommandations import analyze_and_recommend
 from src.ft.ft1.stream_notifications import check_streamers
+from src.utilities.settings import Settings
 
 from src.utilities.utilities import setup_commands
 
 load_dotenv()
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot = discord.Bot()
+settings = Settings()
 
 
 @bot.event
@@ -36,7 +38,7 @@ async def scheduled_recommendation():
 
     This function doesn't take any arguments and doesn't return anything.
     """
-    channel_id = 1252372091878113432
+    channel_id = settings.get('recommendations_channel_id')
     channel = bot.get_channel(channel_id)
 
     if channel:

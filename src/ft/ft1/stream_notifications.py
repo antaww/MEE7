@@ -3,8 +3,11 @@ import requests
 from discord.ext import tasks
 from dotenv import load_dotenv
 
+from src.utilities.settings import Settings
+
 dotenv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..", ".env"))
 load_dotenv(dotenv_path)
+settings = Settings()
 
 TWITCH_CLIENT_ID = os.getenv('TWITCH_CLIENT_ID')
 TWITCH_CLIENT_SECRET = os.getenv('TWITCH_CLIENT_SECRET')
@@ -131,9 +134,10 @@ async def notify_discord(streamer, bot):
 
     This function doesn't return anything.
     """
-    channel_id = 1252372530736664586  # The ID of the Discord channel to send the notification to.
+    channel_id = settings.get('twitch_channel_id')  # The ID of the Discord channel to send the notification to.
     bot_channel = bot.get_channel(channel_id)
     if bot_channel:  # If the bot channel exists.
         await bot_channel.send(
-            f"{streamer} a commencé un stream sur Twitch ! 🎉\nRegardez ici : https://www.twitch.tv/{streamer}"
+            f"> :tada: **{streamer}** started streaming on Twitch!\n"
+            f"> :arrow_right_hook: Watch here: https://www.twitch.tv/{streamer}"
         )
