@@ -1,4 +1,6 @@
 import os
+import tempfile
+from datetime import datetime, timedelta
 
 import discord
 from discord.ext import tasks
@@ -6,15 +8,14 @@ from dotenv import load_dotenv
 
 from src.ft.ft1.recommandations import analyze_and_recommend
 from src.ft.ft1.stream_notifications import check_streamers
+from src.ft.ft2.planning import download_ical, process_ical
 from src.utilities.settings import Settings
-
 from src.utilities.utilities import setup_commands
 
 load_dotenv()
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot = discord.Bot()
 settings = Settings()
-
 
 @bot.event
 async def on_ready():
@@ -25,7 +26,6 @@ async def on_ready():
     print(f'Bot is ready. Logged in as {bot.user}')
     scheduled_recommendation.start()
     check_streamers.start(bot)
-
 
 @tasks.loop(hours=1)
 async def scheduled_recommendation():
@@ -48,7 +48,6 @@ async def scheduled_recommendation():
         recommendation = await analyze_and_recommend(bot, channel_id)
         await channel.send(recommendation)
 
-
 @bot.command(name="recommend", description="Recommends content based on recent discussions")
 async def recommend(ctx, channel_id: discord.Option(discord.SlashCommandOptionType.string)):
     """
@@ -61,10 +60,9 @@ async def recommend(ctx, channel_id: discord.Option(discord.SlashCommandOptionTy
     The function first checks if the channel_id is a digit. If it is, it converts it to an integer and checks if a
     channel with that ID exists. If the channel exists, it calls the `analyze_and_recommend` function with the bot
     and channel_id as arguments to get the recommendation. The recommendation is then sent as a response to the
-    command. If the channel doesn't exist, it sends a response indicating that the channel was not found for
-    analysis. If the channel_id is not a digit, it sends a response indicating that the channel ID is invalid.
+    command. If the channel doesn't exist, it sends a response indiquant que l'ID du canal est invalide.
 
-    This function doesn't return anything.
+    Cette fonction ne renvoie rien.
     """
     if channel_id.isdigit():
         channel_id = int(channel_id)
@@ -76,6 +74,22 @@ async def recommend(ctx, channel_id: discord.Option(discord.SlashCommandOptionTy
     else:
         await ctx.respond("Invalid channel ID.")
 
+
+@bot.command(name="planning", description="Affiche le planning")
+async def planning(ctx, url: discord.Option(discord.SlashCommandOptionType.string)):
+    """
+    This function is a command handler for the 'planning' command.
+
+    It takes two arguments:
+    - ctx: The context in which the command was called.
+    - url: The URL of the iCal file to download.
+
+    The function downloads the iCal file and sends the events of the current week as a message.
+    """
+    async with ctx.typing():
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.ics') as temp_file:
+            await download_ical(url, temp_file.name)
+            await process_ical(temp_file.name, ctx)
 
 setup_commands(bot)
 
