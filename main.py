@@ -1,21 +1,29 @@
 import os
 import tempfile
-from datetime import datetime, timedelta
 
 import discord
+import nltk
 from discord.ext import tasks
 from dotenv import load_dotenv
 
 from src.ft.ft1.recommandations import analyze_and_recommend
 from src.ft.ft1.stream_notifications import check_streamers
+from src.ft.ft4.gifs import search_gif
+from src.ft.ft4.keywords import extract_keywords
+from src.ft.ft4.sentiments import analyze_sentiment
 from src.ft.ft2.planning import download_ical, process_ical
 from src.utilities.settings import Settings
+
 from src.utilities.utilities import setup_commands
 
 load_dotenv()
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-bot = discord.Bot()
+intents = discord.Intents.default()
+intents.message_content = True
+bot = discord.Bot(intents=intents)
 settings = Settings()
+
+
 
 @bot.event
 async def on_ready():
@@ -26,6 +34,31 @@ async def on_ready():
     print(f'Bot is ready. Logged in as {bot.user}')
     scheduled_recommendation.start()
     check_streamers.start(bot)
+
+
+@bot.event
+async def on_message(message: discord.Message):
+    if message.author.bot:
+        return
+
+    if message.guild.id != 1252165373256794185:
+        print(f"Message from {message.guild.name}")
+        return
+
+    if message.channel.id != settings.get('gifs_channel_id'):
+        return
+
+    sentiment = analyze_sentiment(message.content)
+    keywords = extract_keywords(message.content)
+    print(f"{sentiment} - {keywords}")
+    gif_url = search_gif(f"{keywords}")
+    print(f"GIF URL: {gif_url}")
+
+    if gif_url:
+        embed = discord.Embed()
+        embed.set_image(url=gif_url)
+        await message.channel.send(embed=embed)
+
 
 @tasks.loop(hours=1)
 async def scheduled_recommendation():
@@ -48,6 +81,7 @@ async def scheduled_recommendation():
         recommendation = await analyze_and_recommend(bot, channel_id)
         await channel.send(recommendation)
 
+
 @bot.command(name="recommend", description="Recommends content based on recent discussions")
 async def recommend(ctx, channel_id: discord.Option(discord.SlashCommandOptionType.string)):
     """
@@ -60,9 +94,10 @@ async def recommend(ctx, channel_id: discord.Option(discord.SlashCommandOptionTy
     The function first checks if the channel_id is a digit. If it is, it converts it to an integer and checks if a
     channel with that ID exists. If the channel exists, it calls the `analyze_and_recommend` function with the bot
     and channel_id as arguments to get the recommendation. The recommendation is then sent as a response to the
-    command. If the channel doesn't exist, it sends a response indiquant que l'ID du canal est invalide.
+    command. If the channel doesn't exist, it sends a response indicating that the channel was not found for
+    analysis. If the channel_id is not a digit, it sends a response indicating that the channel ID is invalid.
 
-    Cette fonction ne renvoie rien.
+    This function doesn't return anything.
     """
     if channel_id.isdigit():
         channel_id = int(channel_id)

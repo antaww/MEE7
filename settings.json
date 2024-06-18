@@ -1,11 +1,13 @@
 {
   "recommendations_channel_id": 1252372091878113432,
   "twitch_channel_id": 1252372530736664586,
+  "gifs_channel_id": 1252545976032559184,
   "streamers_list": [
     "nikof",
     "alphacast",
     "fugu_fps",
     "kaydop",
-    "aminematue"
+    "aminematue",
+    "lutti"
   ]
 }
