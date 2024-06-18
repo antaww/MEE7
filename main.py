@@ -2,27 +2,26 @@ import os
 import tempfile
 
 import discord
-import nltk
 from discord.ext import tasks
 from dotenv import load_dotenv
 
 from src.ft.ft1.recommandations import analyze_and_recommend
 from src.ft.ft1.stream_notifications import check_streamers
-from src.ft.ft4.gifs import search_gif
-from src.ft.ft4.keywords import extract_keywords
-from src.ft.ft4.sentiments import analyze_sentiment
 from src.ft.ft2.planning import download_ical, process_ical
+from src.ft.ft3.profanities import handle_profanities
+from src.ft.ft3.warnings import Warnings
+from src.ft.ft4.gifs import handle_gifs_channel
 from src.utilities.settings import Settings
-
 from src.utilities.utilities import setup_commands
 
 load_dotenv()
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = discord.Bot(intents=intents)
 settings = Settings()
-
+warnings = Warnings()
 
 
 @bot.event
@@ -32,6 +31,10 @@ async def on_ready():
     This function doesn't take any arguments and doesn't return anything.
     """
     print(f'Bot is ready. Logged in as {bot.user}')
+    await handle_tasks()
+
+
+async def handle_tasks():
     scheduled_recommendation.start()
     check_streamers.start(bot)
 
@@ -45,19 +48,10 @@ async def on_message(message: discord.Message):
         print(f"Message from {message.guild.name}")
         return
 
-    if message.channel.id != settings.get('gifs_channel_id'):
-        return
+    await handle_profanities(message)
 
-    sentiment = analyze_sentiment(message.content)
-    keywords = extract_keywords(message.content)
-    print(f"{sentiment} - {keywords}")
-    gif_url = search_gif(f"{keywords}")
-    print(f"GIF URL: {gif_url}")
-
-    if gif_url:
-        embed = discord.Embed()
-        embed.set_image(url=gif_url)
-        await message.channel.send(embed=embed)
+    if message.channel.id == settings.get('gifs_channel_id'):
+        await handle_gifs_channel(message)
 
 
 @tasks.loop(hours=1)
@@ -110,7 +104,38 @@ async def recommend(ctx, channel_id: discord.Option(discord.SlashCommandOptionTy
         await ctx.respond("Invalid channel ID.")
 
 
-@bot.command(name="planning", description="Affiche le planning")
+@bot.command(name="warnings", description="Displays the warnings for a user or all users")
+async def display_warnings(ctx, user: discord.User = None):
+    """
+    This function is a command handler for the 'warnings' command.
+
+    Args: ctx (discord.Context): The context in which the command was called. user (discord.User, optional): The user
+    for whom to display warnings. If not provided, warnings for all users are displayed.
+
+    The function first checks if a user was provided. If a user was provided, it retrieves the warnings for that user
+    and sends a response with the number of warnings. If no user provided, it retrieves the warnings for all
+    users. If there are any warnings, it creates a description string with the warnings for each user and sends a
+    response with an embed message containing the warnings. If there are no warnings, it sends a response indicating
+    that no warnings were found.
+
+    This function doesn't return anything.
+    """
+    if user:
+        await ctx.respond(f"{user.mention} has {warnings.get_user_warnings(user.id)} warning(s).")
+    else:
+        all_warnings = warnings.get_all_warnings()
+        if all_warnings:
+            description = "\n".join([f"{i + 1}. {ctx.guild.get_member(int(user_id)).mention} - {count} warning(s)"
+                                     for i, (user_id, count) in enumerate(all_warnings.items())])
+        else:
+            description = "No warnings found."
+        embed = discord.Embed(title=f"Warnings Summary of {ctx.guild.name}",
+                              color=discord.Color.red(),
+                              description=description)
+        await ctx.respond(embed=embed)
+
+
+@bot.command(name="planning", description="Displays the events of the current week")
 async def planning(ctx, url: discord.Option(discord.SlashCommandOptionType.string)):
     """
     This function is a command handler for the 'planning' command.
@@ -125,6 +150,7 @@ async def planning(ctx, url: discord.Option(discord.SlashCommandOptionType.strin
         with tempfile.NamedTemporaryFile(delete=False, suffix='.ics') as temp_file:
             await download_ical(url, temp_file.name)
             await process_ical(temp_file.name, ctx)
+
 
 setup_commands(bot)
 
