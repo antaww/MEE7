@@ -135,6 +135,34 @@ async def check_user_and_get_info(streamer):
     return {}
 
 
+async def validate_streamer(streamer, append=False):
+    """
+    This function validates if a streamer is a valid Twitch username.
+
+    Args:
+        streamer (str): The username of the streamer to validate.
+        append (bool): Whether to append the streamer to the list of streamers to check.
+
+    The function first constructs the URL for the Twitch API endpoint to retrieve user information.
+    It then sends a GET request to the Twitch API endpoint with the streamer's username.
+    If the response contains any data, the streamer is considered valid.
+    If the response does not contain any data, the streamer is considered invalid.
+
+    This function returns a boolean value indicating whether the streamer is valid.
+    """
+    url = f'{USER_API_URL}?login={streamer}'  # Construct the URL for the Twitch API endpoint.
+    try:
+        req = requests.get(url, headers=API_HEADERS)  # Send a GET request to the Twitch API endpoint with the API headers.
+        json_data = req.json()  # Retrieve the data from the response.
+        is_valid = bool(json_data.get('data'))
+        if append and is_valid:
+            STREAMERS.append(streamer)
+            streamers_status[streamer] = False
+        return is_valid  # If there is any data, the streamer is valid.
+    except Exception as e:
+        print("Error validating streamer:", e)
+
+
 async def notify_discord(datas, bot):
     """
     This function sends a notification to a specific Discord channel when a streamer starts streaming on Twitch.

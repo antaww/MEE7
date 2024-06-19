@@ -2,11 +2,11 @@ import os
 import tempfile
 
 import discord
-from discord.ext import tasks
+from discord.ext import tasks, commands
 from dotenv import load_dotenv
 
 from src.ft.ft1.recommandations import analyze_and_recommend
-from src.ft.ft1.stream_notifications import check_streamers
+from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
 from src.ft.ft2.planning import download_ical, process_ical
 from src.ft.ft3.profanities import handle_profanities
 from src.ft.ft3.warnings import Warnings
@@ -152,6 +152,31 @@ async def planning(ctx, url: discord.Option(discord.SlashCommandOptionType.strin
         with tempfile.NamedTemporaryFile(delete=False, suffix='.ics') as temp_file:
             await download_ical(url, temp_file.name)
             await process_ical(temp_file.name, ctx)
+
+
+@bot.command(name="add_streamer", description="Adds a streamer to the list of streamers to check")
+@commands.has_permissions(administrator=True)
+async def add_streamer(ctx, streamer: discord.Option(discord.SlashCommandOptionType.string)):
+    """
+    This function is a command handler for the 'add_streamer' command.
+
+    It takes two arguments:
+    - ctx: The context in which the command was called.
+    - streamer: The name of the streamer to add to the list of streamers to check.
+
+    The function first validates the streamer name using the `validate_streamer` function. If the streamer is valid,
+    it adds the streamer to the list of streamers to check and sends a success message. If the streamer is invalid,
+    it sends an error message.
+    """
+    streamer = streamer.lower().replace(" ", "")
+    if await validate_streamer(streamer, append=True):
+        settings.add_streamer(streamer)
+        await ctx.respond(f":white_check_mark: {streamer} has been added to the list of streamers to check.")
+    else:
+        await ctx.respond(f":x: {streamer} is not a valid Twitch username.")
+
+
+# todo: remove streamer command, remove it from settings & streamers vars in stream_notifications.py
 
 
 setup_commands(bot)
