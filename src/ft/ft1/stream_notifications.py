@@ -163,5 +163,5 @@ async def notify_discord(datas, bot):
         embed.add_field(name=":arrow_double_down:", value=f"[Watch here !](https://www.twitch.tv/{user_info['login']})", inline=True)
         embed.set_thumbnail(url=user_info['profile_image_url'])
         embed.set_footer(text="MEE7 Twitch Stream Notifications",
-                         icon_url="https://i.imgur.com/n3LnWW7.png")
+                         icon_url=settings.get('icon_url'))
         await bot_channel.send(embed=embed)

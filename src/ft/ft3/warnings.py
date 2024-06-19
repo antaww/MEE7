@@ -17,6 +17,7 @@ class Warnings:
             json.dump(self.warnings, f, indent=4)
 
     def add_warning(self, user_id):
+        user_id = str(user_id)
         if user_id in self.warnings:
             self.warnings[user_id] += 1
         else:

@@ -69,11 +69,11 @@ async def scheduled_recommendation():
     channel = bot.get_channel(channel_id)
 
     if channel:
-        await channel.send(
+        message = await channel.send(
             f"> # :alarm_clock: **Scheduled recommendation**\n> Analyzing and recommending content in {channel.name}..."
         )
         recommendation = await analyze_and_recommend(bot, channel_id)
-        await channel.send(recommendation)
+        await message.reply(recommendation)
 
 
 @bot.command(name="recommend", description="Recommends content based on recent discussions")
@@ -125,13 +125,15 @@ async def display_warnings(ctx, user: discord.User = None):
     else:
         all_warnings = warnings.get_all_warnings()
         if all_warnings:
-            description = "\n".join([f"{i + 1}. {ctx.guild.get_member(int(user_id)).mention} - {count} warning(s)"
+            description = "\n".join([f"**{i + 1}**. {ctx.guild.get_member(int(user_id)).mention} - {count} warning(s)"
                                      for i, (user_id, count) in enumerate(all_warnings.items())])
         else:
             description = "No warnings found."
-        embed = discord.Embed(title=f"Warnings Summary of {ctx.guild.name}",
+        embed = discord.Embed(title=f":warning: Warnings Summary of {ctx.guild.name}",
                               color=discord.Color.red(),
                               description=description)
+        embed.set_footer(text="MEE7 Warning System",
+                         icon_url=settings.get('icon_url'))
         await ctx.respond(embed=embed)
 
 

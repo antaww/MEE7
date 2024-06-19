@@ -21,7 +21,7 @@ async def handle_profanities(message):
     if profanity.contains_profanity(message.content):  # Check if the message contains profanity.
         await message.delete()  # Delete the message.
         warnings.add_warning(message.author.id)
-        warning_msg = await message.channel.send(
+        await message.channel.send(
             f":warning: **{message.author.mention}**, your message has been deleted for __containing profanity__. "
-            f"\n_Please keep the chat clean._")  # Send a warning message to the channel.
-        await warning_msg.delete(delay=10)  # Delete the warning message after 10 seconds.
+            f"\n_Please keep the chat clean._",
+            delete_after=10)  # Send a warning message to the channel.
