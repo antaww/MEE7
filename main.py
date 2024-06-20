@@ -1,7 +1,9 @@
 import os
 import tempfile
+from datetime import datetime, timedelta
 
 import discord
+import pytz
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
@@ -9,7 +11,8 @@ from datetime import datetime, timezone
 
 from src.ft.ft1.recommandations import analyze_and_recommend
 from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
-from src.ft.ft2.planning import download_ical, process_ical
+from src.ft.ft2.planning import download_ical, is_person_available, is_everyone_available, register_user_ical, \
+    parse_ical, split_messages, check_availability, create_embed_for_week
 from src.ft.ft3.profanities import handle_profanities
 from src.ft.ft3.warnings import Warnings
 from src.ft.ft4.gifs import handle_gifs_channel
@@ -24,6 +27,9 @@ intents.members = True
 bot = discord.Bot(intents=intents)
 settings = Settings()
 warnings = Warnings()
+
+# Dictionnaire pour stocker les fichiers iCal par utilisateur
+user_icals = {}
 
 
 @bot.event
@@ -141,19 +147,38 @@ async def display_warnings(ctx, user: discord.User = None):
 
 @bot.command(name="planning", description="Displays the events of the current week")
 async def planning(ctx, url: discord.Option(discord.SlashCommandOptionType.string)):
-    """
-    This function is a command handler for the 'planning' command.
-
-    It takes two arguments:
-    - ctx: The context in which the command was called.
-    - url: The URL of the iCal file to download.
-
-    The function downloads the iCal file and sends the events of the current week as a message.
-    """
+    print("Command 'planning' called")
     async with ctx.typing():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.ics') as temp_file:
-            await download_ical(url, temp_file.name)
-            await process_ical(temp_file.name, ctx)
+            await download_ical(url, temp_file.name, ctx)
+            events = parse_ical(temp_file.name)
+            current_week_start = datetime.now(pytz.timezone('Europe/Paris')).date() - timedelta(
+                days=datetime.now(pytz.timezone('Europe/Paris')).weekday())
+            week_availability = check_availability(events, current_week_start)
+            embed = create_embed_for_week("Current Week", week_availability)
+            await ctx.send(embed=embed)
+
+
+@bot.command(name="disponible", description="Displays the availabilities of the person from the iCal file")
+async def disponible(ctx, url: discord.Option(discord.SlashCommandOptionType.string),
+                     person: discord.Option(discord.SlashCommandOptionType.string)):
+    print("Command 'disponible' called")
+    async with ctx.typing():
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.ics') as temp_file:
+            await download_ical(url, temp_file.name, ctx)
+            if os.path.getsize(temp_file.name) == 0:
+                await ctx.respond("The downloaded iCal file is empty.")
+                return
+            await register_user_ical(ctx.author.id, temp_file.name, user_icals)
+            await is_person_available(temp_file.name, person, ctx)
+
+
+@bot.command(name="disponibilites",
+             description="Displays the availabilities of all persons who uploaded their iCal files")
+async def disponibilites(ctx):
+    print("Command 'disponibilites' called")
+    async with ctx.typing():
+        await is_everyone_available(ctx, user_icals)
 
 
 @bot.command(name="add_streamer", description="Adds a streamer to the list of streamers to check")
@@ -248,5 +273,4 @@ async def top10messages(ctx, bots: discord.Option(discord.SlashCommandOptionType
 
 
 setup_commands(bot)
-
 bot.run(DISCORD_BOT_TOKEN)
