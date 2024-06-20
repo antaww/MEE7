@@ -1,7 +1,15 @@
-from keybert import KeyBERT
+import spacy
 
-model = KeyBERT()
+nlp = spacy.load("fr_core_news_sm")
 
-def extract_keywords(text: str, num_keywords: int = 5):
-    extracted = model.extract_keywords(text, keyphrase_ngram_range=(1, 1), top_n=num_keywords)
-    return " ".join([keyword for keyword, _ in extracted])
+
+def extract_keywords(message):
+    doc = nlp(message)
+    entities = [ent.text for ent in doc.ents]
+    keywords = [token.text for token in doc if token.is_alpha and not token.is_stop]
+
+    return {
+        "entities": entities,
+        "keywords": keywords,
+        "sentences": [sent.text for sent in doc.sents]
+    }
