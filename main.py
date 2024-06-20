@@ -4,6 +4,8 @@ import tempfile
 import discord
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
+import matplotlib.pyplot as plt
+from datetime import datetime, timezone
 
 from src.ft.ft1.recommandations import analyze_and_recommend
 from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
@@ -177,6 +179,72 @@ async def add_streamer(ctx, streamer: discord.Option(discord.SlashCommandOptionT
 
 
 # todo: remove streamer command, remove it from settings & streamers vars in stream_notifications.py
+
+
+@bot.command(name="top10messages",
+             description="Displays the top 10 users who sent the most messages today.")
+async def top10messages(ctx, bots: discord.Option(discord.SlashCommandOptionType.boolean) = False):
+    await ctx.respond("Calculating, this may take a moment...")
+
+    message_counts = {}
+
+    # Get current date in UTC
+    today = datetime.now(timezone.utc).date()
+
+    # Iterate through all channels in the server
+    for channel in ctx.guild.text_channels:
+        async for message in channel.history(limit=None,
+                                             after=datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)):
+            if message.author.bot and not bots:
+                continue
+            if message.author.id in message_counts:
+                message_counts[message.author.id] += 1
+            else:
+                message_counts[message.author.id] = 1
+
+    # Sort users by message count
+    sorted_counts = sorted(message_counts.items(), key=lambda item: item[1], reverse=True)
+    top10 = sorted_counts[:10]
+
+    if not top10:
+        # No messages found today
+        embed = discord.Embed(title=f"No messages found today ({today})",
+                              description="No data available for top 10 users by message count.",
+                              color=discord.Color.blue())
+        embed.set_footer(text="MEE7 Stats", icon_url=settings.get('icon_url'))
+        await ctx.respond(embed=embed)
+        return
+
+    # Extract usernames and message counts
+    user_names = []
+    message_numbers = []
+    for user_id, count in top10:
+        user = await bot.fetch_user(user_id)
+        user_names.append(f"{user.name}#{user.discriminator}" if user.discriminator != "0" else user.name)
+        message_numbers.append(count)
+
+    # Generate the graph
+    plt.figure(figsize=(10, 5))
+    plt.bar(user_names, message_numbers, color='skyblue')
+    for i, v in enumerate(message_numbers):
+        plt.text(i, v + 0.5, str(v), ha='center', va='bottom')
+    plt.xlabel('Users')
+    plt.ylabel('Message Count')
+    plt.title(f"Top 10 Users by Message Count (Today, {today})")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Save the graph to a file
+    plt.savefig('top10messages.png')
+    plt.close()
+
+    # Send the graph on Discord in an embed
+    embed = discord.Embed(title=f"Top 10 Users by Message Count (Today, {today})",
+                          color=discord.Color.blue())
+    embed.set_image(url="attachment://top10messages.png")
+    embed.set_footer(text="MEE7 Stats", icon_url=settings.get('icon_url'))
+    await ctx.respond(embed=embed, file=discord.File('top10messages.png'))
+    os.remove('top10messages.png')
 
 
 setup_commands(bot)
