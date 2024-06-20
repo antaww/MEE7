@@ -6,3 +6,8 @@ GIPHY_API_KEY=your_giphy_api_key
 TWITCH_CLIENT_ID=your_twitch_client_id
 TWITCH_CLIENT_SECRET=your_twitch_client_secret
 ```
+
+If new lib, update requirements.txt file:
+```
+pip-chill > requirements.txt
+```
