@@ -27,17 +27,17 @@ def setup_commands(bot):
         try:
             await ctx.defer(ephemeral=True)  # Defer the response to avoid timeout
 
-            async def confirm_cleanup():
+            async def confirm_cleanup(messages_cleaned=50, timeout=10):
                 confirmation_embed = discord.Embed(
                     title="Confirm Cleanup",
-                    description="Are you sure you want to __delete__ the last **10 messages** in this channel? "
-                                "\n:hourglass: _10s remaining..._",
+                    description=f"Are you sure you want to __delete__ the last **{messages_cleaned} messages** in this channel? "
+                                f"\n:hourglass: _{timeout}s remaining..._",
                     color=discord.Color.orange()
                 )
                 confirmation_embed.set_footer(text=f"Requested by {ctx.author.display_name}")
 
                 # Send the confirmation message
-                confirm_message = await ctx.send(embed=confirmation_embed, delete_after=10)
+                confirm_message = await ctx.send(embed=confirmation_embed, delete_after=timeout)
 
                 # Add reactions for confirmation
                 await confirm_message.add_reaction("✅")  # Check mark for confirmation
@@ -49,17 +49,17 @@ def setup_commands(bot):
 
                 # Wait for user reaction
                 try:
-                    reaction, _ = await bot.wait_for("reaction_add", timeout=10, check=reaction_check)
+                    reaction, _ = await bot.wait_for("reaction_add", timeout=timeout, check=reaction_check)
 
                     # Process user reaction
                     if str(reaction.emoji) == "✅":
-                        deleted = await ctx.channel.purge(limit=10)
-                        await ctx.send(f":white_check_mark: {len(deleted)} messages deleted.", delete_after=5)
+                        deleted = await ctx.channel.purge(limit=messages_cleaned)
+                        await ctx.send(f":white_check_mark: {len(deleted)} messages deleted.", delete_after=timeout/2)
                     else:
-                        await ctx.send(":x: Cleanup canceled.", delete_after=5)
+                        await ctx.send(":x: Cleanup canceled.", delete_after=timeout/2)
 
                 except asyncio.TimeoutError:
-                    await ctx.send(":x: Cleanup confirmation timed out. Please try again.", delete_after=5)
+                    await ctx.send(":x: Cleanup confirmation timed out. Please try again.", delete_after=timeout/2)
 
             # Call the confirmation function
             await confirm_cleanup()
