@@ -11,3 +11,9 @@ If new lib, update requirements.txt file:
 ```
 pip-chill > requirements.txt
 ```
+
+Error with : fr-core-news-sm
+```
+pip install spacy
+python -m spacy download fr_core_news_sm
+```
