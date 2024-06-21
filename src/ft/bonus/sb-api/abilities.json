@@ -1,0 +1,165 @@
+{
+    "description": "Ultra abilities are unlocked with the 4th evolution, which need a total of 1,000 babies. Each troop evolved to Ultra gives 300 additional Portal Energy.",
+    "archer-queen": {
+        "name": "Archer Queen",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_archer-queen.BjYmUbSL.png",
+        "description": "Gives an X-Bow Spell",
+        "details": "X-Bow shoots 3 arrows every single time. These arrows are slightly angled, so when individual enemies are far away only one arrow will usually reach the target."
+    },
+    "barbarian": {
+        "name": "Barbarian",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_barbarian.Dv__KM9J.png",
+        "description": "Gets Enraged after busting a foe",
+        "details": "During the 7 seconds after busting an enemy, Barbarian gets around 35% more Hit Speed. It doesn't affect other troops of your squad."
+    },
+    "barbarian-king": {
+        "name": "Barbarian King",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_barbarian-king.B2hqPhnb.png",
+        "description": "Gives a Super Rage Spell",
+        "details": "Similar to the normal Rage spell, Super Rage makes troops deal more damage while maintaining the Hit Speed."
+    },
+    "battle-healer": {
+        "name": "Battle Healer",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_battle-healer.C2mHZFJg.png",
+        "description": "Heals much more after opening a Chest",
+        "details": "The amount of HP healed almost doubles."
+    },
+    "bea": {
+        "name": "Bea",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_bea.BnKeKTsI.png",
+        "description": "Bees circle much faster",
+        "details": "With 38% more speed, Ultra bees seem quite dangerous."
+    },
+    "bo": {
+        "name": "Bo",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_bo.BzleGqF2.png",
+        "description": "Mine deals much more damage to Monsters",
+        "details": "Mines deal 66% more damage."
+    },
+    "chicken": {
+        "name": "Chicken",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_chicken.DxXUX_cQ.png",
+        "description": "Spawns Hatchlings much faster while using Turbo",
+        "details": "Spawns load 5x faster with Turbo."
+    },
+    "colt": {
+        "name": "Colt",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_colt.B-NflM4p.png",
+        "description": "Bullet Storm charges when attacking Monsters",
+        "details": "Probably one of the best Ultra abilities, causing the Bullet Storm to activate after any 4 targets are hit, instead of 4 busts. It even counts hitting several targets within the same attack as separate hits, so you can potentially activate the Bullet Storm in less than 4 attacks."
+    },
+    "dynamike": {
+        "name": "Dynamike",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_dynamike.CdG0ffIn.png",
+        "description": "Tosses more powerful dynamite",
+        "details": "With 25% more DPS, Dynamike combines the best parts of all his previous abilities: big damage, 2 sticks and big radius."
+    },
+    "el-primo": {
+        "name": "El Primo",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_el-primo.BO-CEwxb.png",
+        "description": "Heals a lot after Flying Elbow Drop",
+        "details": "Heals 60% after his super attack."
+    },
+    "goblin": {
+        "name": "Goblin",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_goblin.D9o8Fyt6.png",
+        "description": "Increases Coins given to 10",
+        "details": "The total coins for a fusion increase very slightly:"
+    },
+    "greg": {
+        "name": "Greg",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_greg.lEi1ZWqu.png",
+        "description": "Trees drop a Heart",
+        "details": "Both the normal and Fusion drop a single heart."
+    },
+    "heavy": {
+        "name": "Heavy",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_heavy.CWFqKKxn.png",
+        "description": "Heals more when shooting faster",
+        "details": "Heal Per Second (HPS) increases by 85%."
+    },
+    "hog-rider": {
+        "name": "Hog Rider",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_hog-rider.DR5_LbZo.png",
+        "description": "Turbo increases movement speed even more",
+        "details": "Turbo Speed increases by \"27\". Hard to say if this refers to 27% or something else, more testing is needed to know."
+    },
+    "mavis": {
+        "name": "Mavis",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_mavis.C1aaX348.png",
+        "description": "Get more bonus loot from Carrot patches",
+        "details": "The rewards for single carrots doesn't change, but loot when you complete a patch increases significantly."
+    },
+    "max": {
+        "name": "Max",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_max.Cj8GdS-x.png",
+        "description": "Speed Boost lasts much longer",
+        "details": "The Ultra ability increases both the base duration of the Speed Boost and the recharge per busted enemy."
+    },
+    "medic": {
+        "name": "Medic",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_medic.CStFbvG7.png",
+        "description": "Throws Heal Packs much faster",
+        "details": "Medic has 2 different heal effects: passive heal and Heal Packs. Passive heal targets all the troops of your squad, and Heal Packs. Heal Packs heal much more, but are only given to one troop, the one with the least proportional HP."
+    },
+    "mortis": {
+        "name": "Mortis",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_mortis.Dy_qZPGr.png",
+        "description": "Busted foes also spawn Bats",
+        "details": "Now you can get 2 bats for each busted NPC: one straight away, and another when the revived NPC dies."
+    },
+    "nita": {
+        "name": "Nita",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_nita.A_URccsB.png",
+        "description": "Resummons her Bear twice as fast",
+        "details": "The Classic ability resummons Bruce (the bear) after 40 seconds after it's busted. The Ultra ability reduces that time to just 20 seconds."
+    },
+    "pam": {
+        "name": "Pam",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_pam.D-icT_KF.png",
+        "description": "Heal Station has more powerful healing",
+        "details": "Heal Per Second (HPS) increases by 28%, and the final wave heals 25% more."
+    },
+    "penny": {
+        "name": "Penny",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_penny.C7jFYswW.png",
+        "description": "Treasure has much more loot",
+        "details": "You get around 25% more Coins and Gems, so 2 more of each on average."
+    },
+    "royale-king": {
+        "name": "Royale King",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_royale-king.DxOrjqR5.png",
+        "description": "Deploys Elite Royal Recruits",
+        "details": "Elite Recruits have 48% more DPS and 33% more HP than Royal Recruits."
+    },
+    "shelly": {
+        "name": "Shelly",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_shelly.T9ho4FWQ.png",
+        "description": "Shoots bigger Super Shells",
+        "details": "Super Shells double in damage, from 200 to 400. The amount of projectiles also increases, from 15 to 25."
+    },
+    "tank-girl": {
+        "name": "Tank Girl",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_tank-girl.D8d4nO9Y.png",
+        "description": "Tanks repair during Overdrive",
+        "details": "When in Overdrive, Tank heals 200 HP every 1.5 seconds (133 HPS). As a Fusion, she heals 500 HP instead (333 HPS). This is one of the best troops in the game, and this healing ability makes her even more versatile and well-rounded."
+    },
+    "trader": {
+        "name": "Trader",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_trader.BFGJNqVb.png",
+        "description": "Heals much more when giving Gems",
+        "details": "Heals your squad 75% more after collecting 15 coins."
+    },
+    "witch": {
+        "name": "Witch",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_witch.BowwGrNm.png",
+        "description": "Skeletons get stronger bones and a sharp dagger",
+        "details": "Elite Skeletons have double the DPS, and 56% more HP, which is still not much."
+    },
+    "wizard": {
+        "name": "Wizard",
+        "image": "https://squad.royaleapi.com/assets/ability_portrait_e4s_wizard.Cwud9tlM.png",
+        "description": "Bosses always drop a Spell",
+        "details": "This applies to Bosses and Big Monsters"
+    }
+}

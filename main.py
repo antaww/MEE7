@@ -1,18 +1,19 @@
+import json
 import os
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
+from datetime import timedelta
 
 import discord
+import matplotlib.pyplot as plt
 import pytz
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
-import matplotlib.pyplot as plt
-from datetime import datetime, timezone
 
 from src.ft.ft1.recommandations import analyze_and_recommend
 from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
 from src.ft.ft2.planning import download_ical, is_person_available, is_everyone_available, register_user_ical, \
-    parse_ical, split_messages, check_availability, create_embed_for_week
+    parse_ical, check_availability, create_embed_for_week
 from src.ft.ft3.profanities import handle_profanities
 from src.ft.ft3.warnings import Warnings
 from src.ft.ft4.gifs import handle_gifs_channel
@@ -271,6 +272,30 @@ async def top10messages(ctx, bots: discord.Option(discord.SlashCommandOptionType
     await ctx.respond(embed=embed, file=discord.File('top10messages.png'))
     os.remove('top10messages.png')
 
+
+# todo: add an optional parameter with selectable characters from abilities.json (field name)
+#  https://docs.pycord.dev/en/v2.5.x/api/application_commands.html#discord.Option
+@bot.command(name='sb-ultras', description='Display the list of ultra abilities')
+async def sb_ultras(ctx):
+    with open("src/ft/bonus/sb-api/abilities.json", "r") as file:
+        abilities_data = json.load(file)
+
+    ultras_count = len(abilities_data) - 1
+    embed = discord.Embed(title="Ultra Abilities",
+                          description=abilities_data['description'],
+                          color=0xfd6ce4)
+
+    # display only the first character (name, image, description)
+    for character, data in abilities_data.items():
+        if character == 'description':
+            continue
+        embed.add_field(name=data['name'], value=data['description'], inline=False)
+        embed.add_field(name="Details", value=data['details'], inline=False)
+        embed.set_image(url=data['image'])
+        embed.set_footer(text=f"MEE7 Squad Busters Ultra Abilities | 1/{ultras_count}",
+                         icon_url=settings.get('icon_url'))
+        break
+    await ctx.respond(embed=embed)
 
 setup_commands(bot)
 bot.run(DISCORD_BOT_TOKEN)
