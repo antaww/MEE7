@@ -1,10 +1,12 @@
 import json
+import os
 
 
 def generate_ultras(soup, api):
-    ultras_data = {}
-    ultras_data[
-        'description'] = "Ultra abilities are unlocked with the 4th evolution, which need a total of 1,000 babies. Each troop evolved to Ultra gives 300 additional Portal Energy."
+    ultras_data = {
+        'description': "Ultra abilities are unlocked with the 4th evolution, which need a total of 1,000 babies. Each "
+                       "troop evolved to Ultra gives 300 additional Portal Energy."
+    }
 
     # Select all the sections containing character information
     sections = soup.select(
@@ -29,8 +31,22 @@ def generate_ultras(soup, api):
                 ultras_data[current_character]['description'] = text
             elif 'details' not in ultras_data[current_character]:
                 ultras_data[current_character]['details'] = text
+
     # Format the abilities data
     abilities_data_formatted = {k.lower().replace(" ", "-"): v for k, v in ultras_data.items()}
-    print('abilities scraped')
-    with open("abilities.json", "w") as file:
+
+    # Check if the file exists
+    if os.path.exists("src/ft/bonus/squadbusters/abilities.json"):
+        with open("src/ft/bonus/squadbusters/abilities.json", "r") as file:
+            existing_data = json.load(file)
+
+        # Compare existing data with new data
+        if existing_data == abilities_data_formatted:
+            print('No new data to update in abilities.json')
+            return
+
+    # Write the new data if it's different
+    print('New data found, updating abilities.json')
+    with open("src/ft/bonus/squadbusters/abilities.json", "w") as file:
         json.dump(abilities_data_formatted, file, indent=4)
+        print('Updated abilities.json')

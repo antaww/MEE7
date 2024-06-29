@@ -7,9 +7,11 @@ from datetime import timedelta
 import discord
 import matplotlib.pyplot as plt
 import pytz
+from discord import Option
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
 
+from src.ft.bonus.squadbusters.navigation import NavigationView
 from src.ft.ft1.recommandations import analyze_and_recommend
 from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
 from src.ft.ft2.planning import download_ical, is_person_available, is_everyone_available, register_user_ical, \
@@ -46,6 +48,21 @@ async def on_ready():
 async def handle_tasks():
     scheduled_recommendation.start()
     check_streamers.start(bot)
+    scheduled_update.start()
+
+
+@tasks.loop(hours=24)
+async def scheduled_update():
+    """
+    This function is a task that runs every 24 hours.
+
+    The function executes the "scraper.py" script located in the "src/ft/bonus/squadbusters" directory.
+    The purpose of this script is to update the data used by the bot.
+
+    This function doesn't take any arguments and doesn't return anything.
+    """
+    print("Updating squadbusters data...")
+    os.system("python src/ft/bonus/squadbusters/scraper.py")
 
 
 @bot.event
@@ -273,29 +290,26 @@ async def top10messages(ctx, bots: discord.Option(discord.SlashCommandOptionType
     os.remove('top10messages.png')
 
 
-# todo: add an optional parameter with selectable characters from abilities.json (field name)
-#  https://docs.pycord.dev/en/v2.5.x/api/application_commands.html#discord.Option
 @bot.command(name='sb-ultras', description='Display the list of ultra abilities')
-async def sb_ultras(ctx):
-    with open("src/ft/bonus/sb-api/abilities.json", "r") as file:
+async def sb_ultras(ctx, character: Option(str, "The character name (Archer Queen, Barbarian...)", required=False)):
+    with open("src/ft/bonus/squadbusters/abilities.json", "r") as file:
         abilities_data = json.load(file)
+    characters = [character for character in abilities_data.keys() if character != 'description']
 
-    ultras_count = len(abilities_data) - 1
-    embed = discord.Embed(title="Ultra Abilities",
-                          description=abilities_data['description'],
-                          color=0xfd6ce4)
+    if character:
+        character = character.lower().replace(" ", "-")
+        if character in abilities_data:
+            start_index = characters.index(character)
+        else:
+            await ctx.respond(f"Character **{character}** not found.")
+            return
+    else:
+        start_index = 0
 
-    # display only the first character (name, image, description)
-    for character, data in abilities_data.items():
-        if character == 'description':
-            continue
-        embed.add_field(name=data['name'], value=data['description'], inline=False)
-        embed.add_field(name="Details", value=data['details'], inline=False)
-        embed.set_image(url=data['image'])
-        embed.set_footer(text=f"MEE7 Squad Busters Ultra Abilities | 1/{ultras_count}",
-                         icon_url=settings.get('icon_url'))
-        break
-    await ctx.respond(embed=embed)
+    view = NavigationView(characters, abilities_data, start_index)
+    embed = view.update_embed()
+    await ctx.respond(embed=embed, view=view)
+
 
 setup_commands(bot)
 bot.run(DISCORD_BOT_TOKEN)
