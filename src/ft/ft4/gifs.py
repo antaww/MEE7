@@ -6,7 +6,6 @@ import os
 
 from dotenv import load_dotenv
 
-from src.ft.ft4.keywords import extract_keywords
 from src.ft.ft4.sentiments import analyze_sentiment
 
 from src.utilities.settings import Settings
@@ -14,22 +13,43 @@ from src.utilities.settings import Settings
 dotenv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..", ".env"))
 load_dotenv(dotenv_path)
 settings = Settings()
-GIPHY_API_KEY = os.getenv('GIPHY_API_KEY')
+TENOR_API_KEY = os.getenv('TENOR_API_KEY')
+TENOR_CLIENT_KEY = os.getenv('TENOR_CLIENT_KEY')
 
-GIPHY_SEARCH_URL = "https://api.giphy.com/v1/gifs/search"
 
+def search_gif(query, limit=2):
+    """
+    This function searches for a GIF using the Tenor API.
 
-def search_gif(query):
+    Args:
+        query (str): The search term to use when searching for the GIF.
+        limit (int, optional): The maximum number of GIFs to return. Defaults to 2.
+
+    Returns:
+        str: The URL of a randomly selected GIF from the search results. If the API request fails, it returns None.
+
+    Raises:
+        requests.exceptions.RequestException: If the GET request to the Tenor API fails.
+    """
+    # Define the parameters for the API request.
     params = {
-        'api_key': GIPHY_API_KEY,
+        'key': TENOR_API_KEY,
         'q': query,
-        'limit': 10
+        'limit': limit
     }
-    response = requests.get(GIPHY_SEARCH_URL, params=params)
-    data = response.json()
-    if data['data']:
-        index = random.randint(0, len(data['data']) - 1)
-        return data['data'][index]['images']['downsized']['url']
+
+    # Construct the API URL.
+    api_link = ("https://tenor.googleapis.com/v2/search?q=%s&key=%s&client_key=%s&limit=%s" %
+                (query, TENOR_API_KEY, str(TENOR_CLIENT_KEY), 10))
+
+    # Send a GET request to the Tenor API.
+    response = requests.get(api_link, params=params)
+
+    # If the request was successful, select a random GIF from the results and return its URL.
+    if response.status_code == 200:
+        rdm = random.randint(0, limit-1)
+        return response.json()['results'][rdm]['media_formats']['gif']['url']
+    # If the request was not successful, return None.
     else:
         return None
 
@@ -48,13 +68,11 @@ async def handle_gifs_channel(message):
     This function doesn't return anything.
     """
     sentiment = analyze_sentiment(message.content)  # Analyze the sentiment of the message content.
-    keywords = extract_keywords(message.content)
-    keywords = " ".join(keywords['entities'] or keywords['keywords'])
-    print(f"{sentiment} - {keywords}")
-    gif_url = search_gif(f"{keywords}")  # Search for a GIF based on the keywords.
+    # todo: find a way to implement sentiment
+    gif_url = search_gif(message.content)  # Search for a GIF based on the keywords.
     if gif_url:
         embed = discord.Embed()  # Create a new embed message.
         embed.set_image(url=gif_url)  # Set the image of the embed message to the GIF.
         await message.channel.send(embed=embed)  # Send the embed message to the channel.
     else:
-        print(f"No GIF found for keywords: {keywords}.")
+        print(f"No GIF found for keywords: {message.content}.")
