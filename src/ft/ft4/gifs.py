@@ -25,8 +25,7 @@ def search_gif(query, limit=2):
         query (str): The search term to use when searching for the GIF.
         limit (int, optional): The maximum number of GIFs to return. Defaults to 2.
 
-    Returns:
-        str: The URL of a randomly selected GIF from the search results. If the API request fails, it returns None.
+    Returns: str: The URL of a randomly selected GIF from the search results. If the API request fails, a default GIF URL is returned.
 
     Raises:
         requests.exceptions.RequestException: If the GET request to the Tenor API fails.
@@ -34,24 +33,23 @@ def search_gif(query, limit=2):
     # Define the parameters for the API request.
     params = {
         'key': TENOR_API_KEY,
+        'client_key': TENOR_CLIENT_KEY,
         'q': query,
         'limit': limit
     }
 
-    # Construct the API URL.
-    api_link = ("https://tenor.googleapis.com/v2/search?q=%s&key=%s&client_key=%s&limit=%s" %
-                (query, TENOR_API_KEY, str(TENOR_CLIENT_KEY), 10))
-
     # Send a GET request to the Tenor API.
-    response = requests.get(api_link, params=params)
+    response = requests.get("https://tenor.googleapis.com/v2/search", params=params)
 
     # If the request was successful, select a random GIF from the results and return its URL.
-    if response.status_code == 200:
-        rdm = random.randint(0, limit-1)
-        return response.json()['results'][rdm]['media_formats']['gif']['url']
-    # If the request was not successful, return None.
+    if response.status_code == 200 and response.json()['results']:
+        return response.json()['results'][random.randint(0, limit - 1)]['media_formats']['gif']['url']
+    # If the request was not successful, make a new request with a default query.
     else:
-        return None
+        params.update({'q': 'nothing found', 'limit': 5})
+        response = requests.get("https://tenor.googleapis.com/v2/search", params=params)
+        if response.status_code == 200 and response.json()['results']:
+            return response.json()['results'][random.randint(0, params['limit'] - 1)]['media_formats']['gif']['url']
 
 
 async def handle_gifs_channel(message):
