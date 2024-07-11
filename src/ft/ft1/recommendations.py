@@ -1,8 +1,9 @@
 import os
 import textrazor
+from googlesearch import search
 
 
-async def analyze_and_recommend(bot, channel_id):
+async def analyze_topics(bot, channel_id):
     """
     This function analyzes the recent discussions in a given channel and recommends topics based on the analysis.
 
@@ -18,7 +19,7 @@ async def analyze_and_recommend(bot, channel_id):
     constructed and returned. The recommendation message includes the name of the channel and the top 3 topics. If
     there are no topics, a message indicating that there are no recommendations at this time is returned.
 
-    This function returns a string which is the recommendation message.
+    This function returns a string which is the recommendation message and a list of topics.
     """
     client = textrazor.TextRazor(os.getenv('TEXTRAZOR_API_KEY'), extractors=["topics"])
     client.set_entity_freebase_type_filters(["/organization/organization"])
@@ -34,10 +35,34 @@ async def analyze_and_recommend(bot, channel_id):
     topics = [topic.label for topic in response.topics()]  # Retrieve the topics from the analysis.
 
     if topics:  # If there are any topics.
-        recommendation = f"Here are some recommendations based on recent discussions in {channel.name}:"
-        for topic in topics[:3]:  # Get the top 3 topics.
-            recommendation += f"\n> - **{topic}**"
-
-        return recommendation
+        return topics[:3]
     else:
-        return "No recommendations at this time."
+        return []
+
+
+async def recommend_article(query):
+    try:
+        # Perform the search and get the results as a generator
+        search_results = search(query, num_results=1)
+
+        # Convert the generator to a list and get the first result
+        search_results_list = list(search_results)
+
+        # Return the first result if available
+        if search_results_list:
+            return search_results_list[0]
+        else:
+            return "No results found"
+    except Exception as e:
+        return f"An error occurred: {e}"
+
+
+async def generate_recommendations(bot, channel, channel_id):
+    topics = await analyze_topics(bot, channel_id)
+    recommendation = "No recommendations at this time."
+    if topics:  # If there are any topics.
+        recommendation = f"Here are some recommendations based on recent discussions in {channel.mention}:"
+        for topic in topics[:3]:  # Get the top 3 topics.
+            article = await recommend_article(topic)
+            recommendation += f"\n> - **{topic}** - [Read more](<{article}>)"
+    return recommendation

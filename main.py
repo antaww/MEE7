@@ -12,7 +12,7 @@ from discord.ext import tasks, commands
 from dotenv import load_dotenv
 
 from src.ft.bonus.squadbusters.navigation import NavigationView
-from src.ft.ft1.recommandations import analyze_and_recommend
+from src.ft.ft1.recommendations import generate_recommendations
 from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
 from src.ft.ft2.planning import download_ical, is_person_available, is_everyone_available, register_user_ical, \
     parse_ical, check_availability, create_embed_for_week
@@ -91,19 +91,23 @@ async def scheduled_recommendation():
 
     This function doesn't take any arguments and doesn't return anything.
     """
+    recommended_channel_id = settings.get('recommended_channel_id')
+    recommended_channel = bot.get_channel(recommended_channel_id)
     channel_id = settings.get('recommendations_channel_id')
     channel = bot.get_channel(channel_id)
 
-    if channel:
+    if channel and recommended_channel:
         message = await channel.send(
-            f"> # :alarm_clock: **Scheduled recommendation**\n> Analyzing and recommending content in {channel.name}..."
+            f"> # :alarm_clock: **Scheduled recommendation**\n"
+            f"> Analyzing and recommending content in {recommended_channel.name}..."
         )
-        recommendation = await analyze_and_recommend(bot, channel_id)
+        recommendation = await generate_recommendations(bot, recommended_channel, recommended_channel_id)
+
         await message.reply(recommendation)
 
 
 @bot.command(name="recommend", description="Recommends content based on recent discussions")
-async def recommend(ctx, channel_id: discord.Option(discord.SlashCommandOptionType.string)):
+async def recommend(ctx, channel: discord.TextChannel):
     """
     This function is a command handler for the 'recommend' command.
 
@@ -119,15 +123,13 @@ async def recommend(ctx, channel_id: discord.Option(discord.SlashCommandOptionTy
 
     This function doesn't return anything.
     """
-    if channel_id.isdigit():
-        channel_id = int(channel_id)
-        if bot.get_channel(channel_id):
-            recommendation = await analyze_and_recommend(bot, channel_id)
-            await ctx.respond(recommendation)
-        else:
-            await ctx.respond("Channel not found for analysis.")
+    channel_id = channel.id
+    channel = bot.get_channel(channel_id)
+    if channel:
+        recommendation = await generate_recommendations(bot, channel, channel_id)
+        await ctx.respond(recommendation)
     else:
-        await ctx.respond("Invalid channel ID.")
+        await ctx.respond("Channel not found for analysis.")
 
 
 @bot.command(name="warnings", description="Displays the warnings for a user or all users")
