@@ -1,5 +1,4 @@
 import asyncio
-
 import discord
 from discord.ext import commands
 
@@ -54,12 +53,12 @@ def setup_commands(bot):
                     # Process user reaction
                     if str(reaction.emoji) == "✅":
                         deleted = await ctx.channel.purge(limit=messages_cleaned)
-                        await ctx.send(f":white_check_mark: {len(deleted)} messages deleted.", delete_after=timeout/2)
+                        await ctx.send(f":white_check_mark: {len(deleted)} messages deleted.", delete_after=timeout / 2)
                     else:
-                        await ctx.send(":x: Cleanup canceled.", delete_after=timeout/2)
+                        await ctx.send(":x: Cleanup canceled.", delete_after=timeout / 2)
 
                 except asyncio.TimeoutError:
-                    await ctx.send(":x: Cleanup confirmation timed out. Please try again.", delete_after=timeout/2)
+                    await ctx.send(":x: Cleanup confirmation timed out. Please try again.", delete_after=timeout / 2)
 
             # Call the confirmation function
             await confirm_cleanup()

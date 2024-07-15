@@ -1,6 +1,8 @@
 import json
 import os
 
+from loguru import logger
+
 
 def generate_ultras(soup, api):
     ultras_data = {
@@ -42,11 +44,11 @@ def generate_ultras(soup, api):
 
         # Compare existing data with new data
         if existing_data == abilities_data_formatted:
-            print('No new data to update in abilities.json')
+            logger.info('No new data to update in abilities.json')
             return
 
     # Write the new data if it's different
-    print('New data found, updating abilities.json')
+    logger.info('New data found, updating abilities.json')
     with open("src/ft/bonus/squadbusters/abilities.json", "w") as file:
         json.dump(abilities_data_formatted, file, indent=4)
-        print('Updated abilities.json')
+        logger.success('Updated abilities.json')

@@ -4,6 +4,7 @@ import discord
 import requests
 from discord.ext import tasks
 from dotenv import load_dotenv
+from loguru import logger
 
 from src.utilities.settings import Settings
 
@@ -15,7 +16,7 @@ TWITCH_CLIENT_ID = os.getenv('TWITCH_CLIENT_ID')
 TWITCH_CLIENT_SECRET = os.getenv('TWITCH_CLIENT_SECRET')
 
 if not TWITCH_CLIENT_ID or not TWITCH_CLIENT_SECRET:
-    print(
+    logger.critical(
         "Les variables d'environnement TWITCH_CLIENT_ID ou TWITCH_CLIENT_SECRET ne sont pas configurées correctement.")
     exit()
 
@@ -75,7 +76,7 @@ async def check_streamers(bot):
     It takes one argument:
     - bot: The bot instance.
 
-    The function first prints a message to the console indicating that it's checking the streamers. It then iterates
+    The function first logs a message to the console indicating that it's checking the streamers. It then iterates
     over the list of streamers and checks if each streamer is online by calling the `check_user` function. If a
     streamer is online and was previously not online, it updates the streamer's status to online and sends a
     notification to Discord by calling the `notify_discord` function. If a streamer is not online and was previously
@@ -83,13 +84,11 @@ async def check_streamers(bot):
 
     This function doesn't return anything.
     """
-    print("Checking streamers...")
+    logger.info("Checking streamers...")
     for streamer in STREAMERS:
         datas = await check_user_and_get_info(
             streamer)  # Check if the streamer is online by calling the `check_user` function.
         is_online = bool(datas)
-        # debug
-        # print(f"{streamer} is online: {is_online} : {datas}")
         if is_online and not streamers_status[streamer]:  # If the streamer is online and was previously not online.
             streamers_status[streamer] = True  # Update the streamer's status to online.
             await notify_discord(datas, bot)  # Send a notification to Discord by calling the `notify_discord` function.
@@ -112,7 +111,7 @@ async def check_user_and_get_info(streamer):
     If there is any data in the response, the streamer is considered online and the function proceeds to retrieve the user's information.
     The user's information is retrieved by sending another GET request to the Twitch API endpoint, this time with the user_id obtained from the streamer's data.
     If there is any data in the response, the user's information is added to the return dictionary along with the streamer's data.
-    If an exception occurs during the process, an error message is printed and an empty dictionary is returned.
+    If an exception occurs during the process, an error message is logged and an empty dictionary is returned.
     """
     url = f'{STREAMS_API_URL}?user_login={streamer}'  # Construct the URL for the Twitch API endpoint.
     try:
@@ -131,7 +130,7 @@ async def check_user_and_get_info(streamer):
                 user_info = json_data['data'][0]
                 return {'streamer_data': streamer_data, 'user_info': user_info}
     except Exception as e:
-        print("Error checking user or getting user info:", e)
+        logger.error("Error checking user or getting user info:", e)
     return {}
 
 
@@ -160,7 +159,7 @@ async def validate_streamer(streamer, append=False):
             streamers_status[streamer] = False
         return is_valid  # If there is any data, the streamer is valid.
     except Exception as e:
-        print("Error validating streamer:", e)
+        logger.error("Error validating streamer:", e)
 
 
 async def notify_discord(datas, bot):
