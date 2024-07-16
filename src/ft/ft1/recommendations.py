@@ -1,6 +1,7 @@
 import os
+from re import search
+
 import textrazor
-from googlesearch import search
 
 
 async def analyze_topics(bot, channel_id):

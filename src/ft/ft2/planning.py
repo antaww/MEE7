@@ -1,4 +1,7 @@
 import asyncio
+import json
+import os
+
 import aiohttp
 from datetime import datetime, timedelta, time, date
 import icalendar
@@ -10,17 +13,6 @@ from collections import defaultdict
 async def download_ical(url: str, file_path: str, ctx):
     """
     Asynchronously downloads an iCal file from a given URL and saves it to a specified file path.
-
-    Args:
-        url (str): The URL of the iCal file to download.
-        file_path (str): The path where the downloaded iCal file should be saved.
-        ctx: The Discord context, used to send messages to the Discord channel.
-
-    This function uses the aiohttp library to make an asynchronous HTTP GET request to the URL.
-    If the request is successful (HTTP status code 200), it writes the response content to the file at the given path.
-    It then sends a message to the Discord context (`ctx`) indicating that the iCal file has been downloaded.
-    If the request is not successful, it sends a message to the Discord context indicating that the download failed,
-    along with the HTTP status code.
     """
     print("Downloading iCal file from:", url)
     async with aiohttp.ClientSession() as session:
@@ -28,10 +20,20 @@ async def download_ical(url: str, file_path: str, ctx):
             if response.status == 200:
                 with open(file_path, 'wb') as f:
                     f.write(await response.read())
-                await ctx.respond(f'iCal file downloaded to {file_path}')
+                print(f'iCal file downloaded to {file_path}')
             else:
-                await ctx.respond(f'Failed to download iCal file. Status code: {response.status}')
+                await ctx.send(f'Failed to download iCal file. Status code: {response.status}')
 
+async def delete_ical(file_path: str, ctx):
+    """
+    Deletes an iCal file from the specified file path.
+    """
+    try:
+        os.remove(file_path)
+        print(f'iCal file deleted: {file_path}')
+    except FileNotFoundError as e:
+        print(f'File not found: {file_path}')
+        await ctx.send(f'File not found: {file_path}')
 
 def parse_ical(file_path: str, timezone: str = 'Europe/Paris'):
     """
@@ -170,20 +172,6 @@ async def update_embed_with_week(message, file_path, week_offset, person):
 
 
 async def is_person_available(file_path: str, person: str, ctx):
-    """
-    Checks the availability of a person for the current week and sends a Discord message with the results.
-
-    Args:
-        file_path (str): The path to the iCal file to parse.
-        person (str): The name of the person.
-        ctx: The Discord context, used to send messages to the Discord channel.
-
-    This function parses the iCal file and checks the availability of the person for the current week.
-    It creates a Discord embed message for the person's availability and sends it to the Discord context (`ctx`).
-    It then adds '⬅️' and '➡️' reactions to the scent message.
-
-    This function is asynchronous and should be awaited.
-    """
     print(f"Checking availability for person: {person}")
     events = parse_ical(file_path)
     current_week_start = datetime.now(pytz.timezone('Europe/Paris')).date() - timedelta(
@@ -197,16 +185,6 @@ async def is_person_available(file_path: str, person: str, ctx):
     await sent_message.add_reaction('➡️')
 
     def check(reaction_emoji, user_click):
-        """
-        Checks if the reaction added to the message is from the author and is either '⬅️' or '➡️'.
-
-        Args:
-            reaction_emoji: The reaction added to the message.
-            user_click: The user who added the reaction.
-
-        Returns:
-            bool: True if the reaction is from the author and is either '⬅️' or '➡️', False otherwise.
-        """
         return user_click == ctx.author and str(reaction_emoji.emoji) in ['⬅️', '➡️']
 
     current_week_offset = 0
@@ -223,21 +201,16 @@ async def is_person_available(file_path: str, person: str, ctx):
         except asyncio.TimeoutError:
             break
 
+async def is_everyone_available(ctx, user_icals):
+    print("Checking availability for all users")
+    all_availabilities = {}
+    for user_id, file_path in user_icals.items():
+        print(f"Checking availability for user: {user_id}")
+        availability = await is_person_available(file_path, user_id, ctx)
+        all_availabilities[user_id] = availability
 
-async def register_user_ical(user_id, file_path, user_icals):
-    """
-    Registers a user's iCal file.
-
-    Args:
-        user_id: The ID of the user.
-        file_path (str): The path to the iCal file.
-        user_icals (dict): A dictionary mapping user IDs to iCal file paths.
-
-    This function adds the user's iCal file path to the user_icals dictionary with the user ID as the key.
-    It then prints a message indicating that the iCal file has been registered for the user.
-    """
-    user_icals[user_id] = file_path
-    print(f"Registered iCal file for user {user_id}")
+    for user_id, availability in all_availabilities.items():
+        await ctx.respond(f"User {user_id} availability: {availability}")
 
 
 async def is_everyone_available(ctx, user_icals):

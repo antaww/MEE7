@@ -14,8 +14,9 @@ from dotenv import load_dotenv
 from src.ft.bonus.squadbusters.navigation import NavigationView
 from src.ft.ft1.recommendations import generate_recommendations
 from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
-from src.ft.ft2.planning import download_ical, is_person_available, is_everyone_available, register_user_ical, \
-    parse_ical, check_availability, create_embed_for_week
+from src.ft.ft2.icals_to_json import load_user_icals, register_user_ical
+from src.ft.ft2.planning import is_everyone_available, \
+    parse_ical, check_availability, create_embed_for_week, download_ical, delete_ical
 from src.ft.ft3.profanities import handle_profanities
 from src.ft.ft3.warnings import Warnings
 from src.ft.ft4.gifs import handle_gifs_channel
@@ -31,8 +32,9 @@ bot = discord.Bot(intents=intents)
 settings = Settings()
 warnings = Warnings()
 
-# Dictionnaire pour stocker les fichiers iCal par utilisateur
 user_icals = {}
+load_user_icals()
+
 
 
 @bot.event
@@ -165,32 +167,15 @@ async def display_warnings(ctx, user: discord.User = None):
         await ctx.respond(embed=embed)
 
 
-@bot.command(name="planning", description="Displays the events of the current week")
-async def planning(ctx, url: discord.Option(discord.SlashCommandOptionType.string)):
-    print("Command 'planning' called")
-    async with ctx.typing():
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.ics') as temp_file:
-            await download_ical(url, temp_file.name, ctx)
-            events = parse_ical(temp_file.name)
-            current_week_start = datetime.now(pytz.timezone('Europe/Paris')).date() - timedelta(
-                days=datetime.now(pytz.timezone('Europe/Paris')).weekday())
-            week_availability = check_availability(events, current_week_start)
-            embed = create_embed_for_week("Current Week", week_availability)
-            await ctx.send(embed=embed)
-
-
-@bot.command(name="disponible", description="Displays the availabilities of the person from the iCal file")
-async def disponible(ctx, url: discord.Option(discord.SlashCommandOptionType.string),
-                     person: discord.Option(discord.SlashCommandOptionType.string)):
-    print("Command 'disponible' called")
-    async with ctx.typing():
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.ics') as temp_file:
-            await download_ical(url, temp_file.name, ctx)
-            if os.path.getsize(temp_file.name) == 0:
-                await ctx.respond("The downloaded iCal file is empty.")
-                return
-            await register_user_ical(ctx.author.id, temp_file.name, user_icals)
-            await is_person_available(temp_file.name, person, ctx)
+@bot.command(name="register_ical", description="Register your iCal file for availability checks")
+async def register_ical(ctx, url: discord.Option(discord.SlashCommandOptionType.string)):
+    await ctx.defer()
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.ics') as temp_file:
+        await download_ical(url, temp_file.name, ctx)
+        await register_user_ical(ctx.author.id, ctx.author.name, temp_file.name, user_icals)
+        await delete_ical(temp_file.name, ctx)
+        await ctx.defer(10)
+        await ctx.send("Your iCal file has been registered successfully.")
 
 
 @bot.command(name="disponibilites",
