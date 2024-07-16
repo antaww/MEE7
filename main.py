@@ -5,14 +5,15 @@ from datetime import datetime, timezone
 from loguru import logger
 
 import discord
-import matplotlib.pyplot as plt
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
+from discord.ui import Select, View
+from matplotlib import pyplot as plt
 
 from src.ft.bonus.squadbusters.navigation import NavigationView
 from src.ft.ft1.recommendations import generate_recommendations
 from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
-from src.ft.ft2.icals_to_json import register_user_ical, load_user_icals
+from src.ft.ft2.icals_to_json import register_user_ical
 from src.ft.ft2.planning import (
     is_everyone_available,
     download_ical,
@@ -35,23 +36,38 @@ bot = discord.Bot(intents=intents)
 settings = Settings()
 warnings = Warnings()
 
-user_icals = {}
-load_user_icals()
+
+def load_user_icals(directory='user_icals'):
+    user_icals = {}
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    for filename in os.listdir(directory):
+        if filename.endswith('.json'):
+            user_id = filename.split('.')[0]
+            user_icals[user_id] = os.path.join(directory, filename)
+    return user_icals
+
+
+user_icals = load_user_icals()
+
 
 @bot.event
 async def on_ready():
     logger.success(f'Bot is ready. Logged in as {bot.user}')
     await handle_tasks()
 
+
 async def handle_tasks():
     scheduled_recommendation.start()
     check_streamers.start(bot)
     scheduled_update.start()
 
+
 @tasks.loop(hours=24)
 async def scheduled_update():
     logger.info("Updating squadbusters data...")
     os.system("python src/ft/bonus/squadbusters/scraper.py")
+
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -66,6 +82,7 @@ async def on_message(message: discord.Message):
 
     if message.channel.id == settings.get('gifs_channel_id'):
         await handle_gifs_channel(message)
+
 
 @tasks.loop(hours=1)
 async def scheduled_recommendation():
@@ -82,6 +99,7 @@ async def scheduled_recommendation():
         recommendation = await generate_recommendations(bot, recommended_channel, recommended_channel_id)
         await message.reply(recommendation)
 
+
 @bot.command(name="recommend", description="Recommends content based on recent discussions")
 async def recommend(ctx, channel: discord.TextChannel):
     channel_id = channel.id
@@ -91,6 +109,7 @@ async def recommend(ctx, channel: discord.TextChannel):
         await ctx.respond(recommendation)
     else:
         await ctx.respond("Channel not found for analysis.")
+
 
 @bot.command(name="warnings", description="Displays the warnings for a user or all users")
 async def display_warnings(ctx, user: discord.User = None):
@@ -111,6 +130,7 @@ async def display_warnings(ctx, user: discord.User = None):
         embed.set_footer(text="MEE7 Warning System", icon_url=settings.get('icon_url'))
         await ctx.respond(embed=embed)
 
+
 @bot.command(name="register_ical", description="Register your iCal file for availability checks")
 async def register_ical(ctx, url: discord.Option(discord.SlashCommandOptionType.string)):
     ensure_temp_dir()
@@ -119,12 +139,32 @@ async def register_ical(ctx, url: discord.Option(discord.SlashCommandOptionType.
     await register_user_ical(ctx.author.id, ctx.author.name, temp_file_path, user_icals)
     await ctx.respond(f":white_check_mark: Your iCal file has been registered successfully.")
 
-@bot.command(name="disponibilites", description="Displays the availabilities of all persons who uploaded their iCal files")
+
+@bot.command(name="disponibilites", description="Displays the availabilities of all persons in the Discord server")
 async def disponibilites(ctx):
-    async with ctx.typing():
-        embeds = await is_everyone_available(ctx, "user_icals/kheir.json")
-        for embed in embeds:
-            await ctx.respond(embed=embed)
+    users = ctx.guild.members
+    users = [user for user in users if not user.bot]
+
+    if not users:
+        await ctx.respond("No users found in the Discord server.")
+        return
+
+    options = [discord.SelectOption(label=member.display_name, value=str(member.id)) for member in users]
+
+    select = Select(placeholder="Choose a user", options=options)
+    async def select_callback(interaction):
+        user_id = int(select.values[0])
+        async with ctx.typing():
+            embeds = await is_everyone_available(ctx, f"user_icals/{user_id}.json")
+            for embed in embeds:
+                await ctx.respond(embed=embed)
+
+    select.callback = select_callback
+    view = View()
+    view.add_item(select)
+
+    await ctx.respond("Select a user to view their availability:", view=view)
+
 
 @bot.command(name="add_streamer", description="Adds a streamer to the list of streamers to check")
 @commands.has_permissions(administrator=True)
@@ -136,6 +176,7 @@ async def add_streamer(ctx, streamer: discord.Option(discord.SlashCommandOptionT
     else:
         await ctx.respond(f":x: {streamer} is not a valid Twitch username.")
 
+
 @bot.command(name="top10messages", description="Displays the top 10 users who sent the most messages today.")
 async def top10messages(ctx, bots: discord.Option(discord.SlashCommandOptionType.boolean) = False):
     await ctx.respond("Calculating, this may take a moment...")
@@ -144,7 +185,8 @@ async def top10messages(ctx, bots: discord.Option(discord.SlashCommandOptionType
     today = datetime.now(timezone.utc).date()
 
     for channel in ctx.guild.text_channels:
-        async for message in channel.history(limit=None, after=datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)):
+        async for message in channel.history(limit=None,
+                                             after=datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)):
             if message.author.bot and not bots:
                 continue
             if message.author.id in message_counts:
@@ -189,25 +231,7 @@ async def top10messages(ctx, bots: discord.Option(discord.SlashCommandOptionType
     await ctx.respond(embed=embed, file=discord.File('top10messages.png'))
     os.remove('top10messages.png')
 
-# @bot.command(name='sb-ultras', description='Display the list of ultra abilities')
-# async def sb_ultras(ctx, character: Option(str, "The character name (Archer Queen, Barbarian...)", required=False)):
-#     with open("src/ft/bonus/squadbusters/abilities.json", "r") as file:
-#         abilities_data = json.load(file)
-#     characters = [character for character in abilities_data.keys() if character != 'description']
-#
-#     if character:
-#         character = character.lower().replace(" ", "-")
-#         if character in abilities_data:
-#             start_index = characters.index(character)
-#         else:
-#             await ctx.respond(f"Character {character} not found.")
-#             return
-#     else:
-#         start_index = 0
-#
-#     view = NavigationView(characters, abilities_data, start_index)
-#     embed = view.update_embed()
-#     await ctx.respond(embed=embed, view=view)
+
 
 setup_commands(bot)
 bot.run(DISCORD_BOT_TOKEN)
