@@ -1,20 +1,38 @@
-import asyncio
 import json
 import os
+from datetime import datetime, timedelta, time, date
+from collections import defaultdict
 
 import aiohttp
-from datetime import datetime, timedelta, time, date
 import icalendar
 import pytz
 import discord
-from collections import defaultdict
 
+
+TEMP_DIR = 'temp_icals'
+
+def ensure_temp_dir():
+    if not os.path.exists(TEMP_DIR):
+        os.makedirs(TEMP_DIR)
 
 async def download_ical(url: str, file_path: str, ctx):
     """
-    Asynchronously downloads an iCal file from a given URL and saves it to a specified file path.
+    Asynchronously downloads an iCal file from a specified URL and saves it to a given file path.
+
+    This function attempts to download an iCal (.ics) file from the provided URL. If the download is successful,
+    the file is saved to the specified path on the local file system. If the download fails (e.g., due to a network error
+    or the server responding with a status code other than 200), an error message is sent to the provided context (ctx),
+    typically a Discord context in this application, indicating the failure.
+
+    Args:
+        url (str): The URL from which to download the iCal file.
+        file_path (str): The local file system path where the downloaded file should be saved.
+        ctx: The context in which this function is called, used here to send messages back to a Discord channel.
+
+    Returns:
+        None. The function's primary side effects are saving a file to the disk or sending a message through Discord.
     """
-    print("Downloading iCal file from:", url)
+    print(f"Downloading iCal file from: {url}")
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status == 200:
@@ -24,37 +42,51 @@ async def download_ical(url: str, file_path: str, ctx):
             else:
                 await ctx.send(f'Failed to download iCal file. Status code: {response.status}')
 
+
 async def delete_ical(file_path: str, ctx):
     """
-    Deletes an iCal file from the specified file path.
+    Asynchronously deletes a specified iCal file and notifies the context of the action's result.
+
+    This function attempts to delete an iCal (.ics) file located at the given file path. If the file is successfully
+    deleted, a confirmation message is printed to the console. If the file does not exist, a message indicating
+    the file was not found is printed to the console and sent to the provided context (ctx), typically a Discord
+    context in this application, to notify the user of the issue.
+
+    Args:
+        file_path (str): The local file system path of the iCal file to be deleted.
+        ctx: The context in which this function is called, used here to send messages back to a Discord channel.
+
+    Returns:
+        None. The function's primary side effects are deleting a file from the disk and possibly sending a message
+        through Discord.
     """
     try:
         os.remove(file_path)
         print(f'iCal file deleted: {file_path}')
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         print(f'File not found: {file_path}')
         await ctx.send(f'File not found: {file_path}')
 
-def parse_ical(file_path: str, timezone: str = 'Europe/Paris'):
+
+def parse_ical_content(ical_content: str, timezone: str = 'Europe/Paris'):
     """
-    Parses an iCal file and extracts the events.
+    Parses the content of an iCal file and organizes events by date.
+
+    This function takes the content of an iCal file as a string and a timezone string. It processes the iCal content
+    to extract events (VEVENT components) and organizes them by their start date. Each event's start and end times
+    are adjusted to the specified timezone. The function returns a dictionary where keys are dates and values are lists
+    of tuples, each tuple containing the event summary, start datetime, and end datetime, all adjusted to the specified timezone.
 
     Args:
-        file_path (str): The path to the iCal file to parse.
-        timezone (str, optional): The timezone to use for the event times. Defaults to 'Europe/Paris'.
-
-    This function reads the iCal file, walks through its components, and extracts the events.
-    Each event is a EVENT component with a start time (START), end time (TEND), and summary.
-    The start and end times are converted to the specified timezone.
-    If the start or end time is a date, it is converted to a datetime at the start of the day in the specified timezone.
-    The events are grouped by date and returned as a dictionary mapping dates to lists of events.
-    Each event is a tuple containing the summary, start time, and end time.
+        ical_content (str): The content of an iCal file as a string.
+        timezone (str): The timezone to which the event times will be converted. Defaults to 'Europe/Paris'.
 
     Returns:
-        dict: A dictionary mapping dates to lists of events.
+        dict: A dictionary where each key is a date (datetime.date object) and each value is a list of tuples.
+              Each tuple contains three elements: the event summary (str), the start datetime (datetime.datetime),
+              and the end datetime (datetime.datetime), all adjusted to the specified timezone.
     """
-    with open(file_path, 'rb') as f:
-        gcal = icalendar.Calendar.from_ical(f.read())
+    gcal = icalendar.Calendar.from_ical(ical_content)
     events = defaultdict(list)
     for component in gcal.walk():
         if component.name == "VEVENT":
@@ -70,122 +102,139 @@ def parse_ical(file_path: str, timezone: str = 'Europe/Paris'):
             elif isinstance(end, (datetime, date)):
                 end = datetime.combine(end, time.min).replace(tzinfo=pytz.timezone(timezone))
             events[start.date()].append((summary, start, end))
-            print(f"Event found: {start} - {summary}")
+
     return events
 
 
 def check_availability(events, start_of_week):
     """
-    Checks the availability of a person for a week based on their events.
+    Determines the daily availability of a person based on their scheduled events for a week.
 
-    Args: events (dict): A dictionary mapping dates to lists of events. Each event is a tuple containing the summary,
-    start time, and end time. start_of_week (datetime.date): The date of the start of the week to check availability
-    for.
+    This function iterates through each day of a week starting from a given date. For each day, it checks the scheduled
+    events and updates the availability for morning, afternoon, and evening based on the event times. The availability
+    for each period is set to False if there is any event overlapping with the predefined time slots for morning
+    (08:30 to 12:30), afternoon (13:30 to 17:00), and evening (after 17:00 or before 08:30 the next day).
 
-    This function checks the availability of a person for each day of the week starting from the start_of_week. For
-    each day, it checks the availability in the morning (08:30 to 12:30), afternoon (13:30 to 17:00), and evening (
-    17:00 to 08:30). If there is an event during a time slot, the person is considered not available during that time
-    slot. The availability for each day is stored in a dictionary and returned.
+    Args:
+        events (dict): A dictionary where keys are dates (datetime.date objects) and values are lists of tuples.
+                       Each tuple contains the event summary (str), the start datetime (datetime.datetime),
+                       and the end datetime (datetime.datetime) of an event.
+        start_of_week (datetime.date): The date representing the first day of the week for which to check availability.
 
-    Returns: dict: A dictionary mapping dates to availability. The availability is a dictionary mapping time slots (
-    'morning', 'afternoon', 'evening') to a boolean indicating whether the person is available during that time slot.
+    Returns:
+        dict: A dictionary where keys are dates (datetime.date objects) and values are dictionaries. Each value dictionary
+              has keys 'morning', 'afternoon', and 'evening' with boolean values indicating availability for those periods.
     """
     week_availability = {}
     for i in range(7):
         day = start_of_week + timedelta(days=i)
-        availability = {
-            "morning": True,
-            "afternoon": True,
-            "evening": True
-        }
-
+        availability = {"morning": True, "afternoon": True, "evening": True}
         for summary, start, end in events.get(day, []):
-            print(f"Checking event: {summary} from {start} to {end} on {day}")
-            # Check morning availability (08:30 to 12:30)
-            if (start.time() < datetime.strptime('12:30', '%H:%M').time() and end.time() >
-                    datetime.strptime('08:30', '%H:%M').time()):
+            if (start.time() < datetime.strptime('12:30', '%H:%M').time() and end.time() > datetime.strptime('08:30', '%H:%M').time()):
                 availability["morning"] = False
-            # Check afternoon availability (13:30 to 17:00)
-            if (start.time() < datetime.strptime('17:00', '%H:%M').time() and end.time() >
-                    datetime.strptime('13:30', '%H:%M').time()):
+            if (start.time() < datetime.strptime('17:00', '%H:%M').time() and end.time() > datetime.strptime('13:30', '%H:%M').time()):
                 availability["afternoon"] = False
-            # Check evening availability (17:00 to 08:30)
-            if (start.time() >= datetime.strptime('17:00', '%H:%M').time() or end.time() <=
-                    datetime.strptime('08:30', '%H:%M').time()):
+            if (start.time() >= datetime.strptime('17:00', '%H:%M').time() or end.time() <= datetime.strptime('08:30', '%H:%M').time()):
                 availability["evening"] = False
-
-        print(f"Availability for {day}: {availability}")
         week_availability[day] = availability
-
     return week_availability
 
 
 def create_embed_for_week(person, week_availability):
     """
-    Creates a Discord embed message for a person's availability for a week.
+    Creates a Discord embed message displaying a person's availability for each day of a week.
+
+    This function iterates over each day in the `week_availability` dictionary, formatting the availability
+    information into a Discord embed. The embed displays the person's name in the title and lists each day of the week
+    with the person's availability for morning, afternoon, and evening. Availability is marked with a check mark
+    for available times and an 'x' for unavailable times.
 
     Args:
-        person (str): The name of the person.
-        week_availability (dict): A dictionary mapping dates to availability. The availability is a dictionary mapping time slots ('morning', 'afternoon', 'evening') to a boolean indicating whether the person is available during that time slot.
-
-    This function creates a Discord embed message with the title as the person's name and the color as blue.
-    For each day in the week_availability, it adds a field to the embed with the name as the date and the value as the availability for the morning, afternoon, and evening.
-    The availability is indicated as 'Available' if the person is available during that time slot, and 'Not Available' otherwise.
+        person (str): The name of the person whose availability is being checked.
+        week_availability (dict): A dictionary where keys are `datetime.date` objects representing each day of the week,
+                                  and values are dictionaries with keys 'morning', 'afternoon', and 'evening'. Each key
+                                  maps to a boolean indicating availability for that time period.
 
     Returns:
-        discord.Embed: A Discord embed message for the person's availability for a week.
+        discord.Embed: An embed object ready to be sent in a Discord message, containing the availability information.
     """
     embed = discord.Embed(title=f"Availability for {person}", color=discord.Color.blue())
     for day, availability in week_availability.items():
         day_str = day.strftime('%A %d/%m/%Y')
-        embed.add_field(name=day_str, value=f"Morning: {'Available' if availability['morning'] else 'Not Available'}\n"
-                                            f"Afternoon: {'Available' if availability['afternoon'] else 'Not Available'}\n"
-                                            f"Evening: {'Available' if availability['evening'] else 'Not Available'}",
-                        inline=False)
+        embed.add_field(
+            name=day_str,
+            value=(
+                f"Morning: {'Available :white_check_mark:' if availability['morning'] else 'Not Available :x:'}\n"
+                f"Afternoon: {'Available :white_check_mark:' if availability['afternoon'] else 'Not Available :x:'}\n"
+                f"Evening: {'Available :white_check_mark:' if availability['evening'] else 'Not Available :x:'}"
+            ),
+            inline=False,
+        )
     return embed
 
 
-async def update_embed_with_week(message, file_path, week_offset, person):
+async def update_embed_with_week(message, ical_content, week_offset, person):
     """
-    Updates a Discord embed message with a person's availability for a week offset from the current week.
+    Updates a Discord message with an embed representing a person's availability for a specific week.
+
+    This asynchronous function calculates the start date of a target week based on the current date and a specified
+    offset in weeks. It then parses the iCal content to determine the person's availability for that week and updates
+    the provided Discord message with a new embed reflecting this availability.
 
     Args:
-        message (discord.Message): The Discord message to edit.
-        file_path (str): The path to the iCal file to parse.
-        week_offset (int): The number of weeks offset from the current week. Can be negative to indicate past weeks.
-        person (str): The name of the person.
+        message (discord.Message): The Discord message to be updated with the new embed.
+        ical_content (str): The content of an iCal file as a string, containing the events to be considered for
+                            calculating availability.
+        week_offset (int): The number of weeks to offset from the current week to find the target week. Can be
+                           positive (future weeks), zero (current week), or negative (past weeks).
+        person (str): The name of the person whose availability is being checked.
 
-    This function calculates the start of the target week based on the current week and the week_offset.
-    It then parses the iCal file and checks the availability of the person for the target week.
-    It creates a Discord embed message for the person's availability and edits the provided message with the new embed.
-
-    This function is asynchronous and should be awaited.
+    Returns:
+        None. The function's primary side effect is updating a Discord message with a new embed.
     """
     current_week_start = datetime.now(pytz.timezone('Europe/Paris')).date() - timedelta(
         days=datetime.now(pytz.timezone('Europe/Paris')).weekday())
     target_week_start = current_week_start + timedelta(weeks=week_offset)
-    events = parse_ical(file_path)
+    events = parse_ical_content(ical_content)
     week_availability = check_availability(events, target_week_start)
-
     embed = create_embed_for_week(person, week_availability)
     await message.edit(embed=embed)
 
 
-async def is_person_available(file_path: str, person: str, ctx):
+async def is_person_available(ctx, person, ical_content):
+    """
+    Asynchronously checks and displays a person's availability for the current week in a Discord channel.
+
+    This function first parses the provided iCal content to determine the person's events for the current week.
+    It then calculates the person's availability based on these events and creates a Discord embed message to display
+    this availability. The embed is sent to the Discord channel associated with the context (ctx). After sending the
+    message, the function adds 'previous week' and 'next week' navigation reactions to the message. It then enters a
+    loop to handle these reactions, updating the embed with the person's availability for the adjusted week as necessary.
+    The loop exits if no reaction is received within a timeout period.
+
+    Args:
+        ctx: The context in which this function is called, used here to send messages back to a Discord channel.
+        person (str): The name of the person whose availability is being checked.
+        ical_content (str): The content of an iCal file as a string, containing the events to be considered for
+                            calculating availability.
+
+    Returns:
+        None. The function's primary side effects are sending a Discord message and potentially updating it based
+        on user reactions.
+    """
     print(f"Checking availability for person: {person}")
-    events = parse_ical(file_path)
+    events = parse_ical_content(ical_content)
     current_week_start = datetime.now(pytz.timezone('Europe/Paris')).date() - timedelta(
         days=datetime.now(pytz.timezone('Europe/Paris')).weekday())
     week_availability = check_availability(events, current_week_start)
-
     embed = create_embed_for_week(person, week_availability)
     sent_message = await ctx.send(embed=embed)
 
     await sent_message.add_reaction('⬅️')
     await sent_message.add_reaction('➡️')
 
-    def check(reaction_emoji, user_click):
-        return user_click == ctx.author and str(reaction_emoji.emoji) in ['⬅️', '➡️']
+    def check(reaction, user):
+        return user == ctx.author and str(reaction.emoji) in ['⬅️', '➡️']
 
     current_week_offset = 0
     while True:
@@ -195,62 +244,65 @@ async def is_person_available(file_path: str, person: str, ctx):
                 current_week_offset -= 1
             elif str(reaction.emoji) == '➡️':
                 current_week_offset += 1
-
-            await update_embed_with_week(sent_message, file_path, current_week_offset, person)
+            await update_embed_with_week(sent_message, ical_content, current_week_offset, person)
             await sent_message.remove_reaction(reaction.emoji, user)
         except asyncio.TimeoutError:
             break
 
-async def is_everyone_available(ctx, user_icals):
-    print("Checking availability for all users")
-    all_availabilities = {}
-    for user_id, file_path in user_icals.items():
-        print(f"Checking availability for user: {user_id}")
-        availability = await is_person_available(file_path, user_id, ctx)
-        all_availabilities[user_id] = availability
 
-    for user_id, availability in all_availabilities.items():
-        await ctx.respond(f"User {user_id} availability: {availability}")
-
-
-async def is_everyone_available(ctx, user_icals):
+async def is_everyone_available(ctx, json_file_path: str):
     """
-    Checks the availability of all users for the current week and sends a Discord message with the results.
+    Asynchronously checks and displays the availability of all users for the current week in a Discord channel.
+
+    This function reads user data from a specified JSON file, including user IDs and their corresponding iCal content.
+    It then calculates each user's availability for the current week based on their iCal events. For each user, it creates
+    a Discord embed message displaying their availability and collects these embeds in a list to be potentially sent or
+    processed further.
+
+    The function is designed to handle multiple users' availabilities but currently processes only one user's data from
+    the JSON file. Future enhancements could iterate over multiple users within the JSON file.
 
     Args:
-        ctx: The Discord context, used to send messages to the Discord channel.
-        user_icals (dict): A dictionary mapping user IDs to iCal file paths.
+        ctx: The context in which this function is called, used here to potentially send messages back to a Discord channel.
+        json_file_path (str): The file system path to the JSON file containing user data (user IDs and iCal content).
 
-    This function iterates over the user_icals dictionary and checks the availability of each user for the current week.
-    The availability of each user is stored in a dictionary and sent to the Discord context (`ctx`).
-
-    This function is asynchronous and should be awaited.
+    Returns:
+        list: A list of discord.Embed objects, each representing the availability of a user for the current week.
     """
     print("Checking availability for all users")
-    all_availabilities = {}
-    for user_id, file_path in user_icals.items():
-        print(f"Checking availability for user: {user_id}")
-        availability = await is_person_available(file_path, user_id, ctx)
-        all_availabilities[user_id] = availability
+    with open(json_file_path, 'r') as json_file:
+        user_data = json.load(json_file)
 
-    for user_id, availability in all_availabilities.items():
-        await ctx.respond(f"User {user_id} availability: {availability}")
+    user_id = user_data["user_id"]
+    ical_content = user_data["ical_content"]
+
+    embeds = []
+    print(f"Checking availability for user: {user_id}")
+    events = parse_ical_content(ical_content)
+    current_week_start = datetime.now(pytz.timezone('Europe/Paris')).date() - timedelta(
+        days=datetime.now(pytz.timezone('Europe/Paris')).weekday())
+    week_availability = check_availability(events, current_week_start)
+    embed = create_embed_for_week(user_id, week_availability)
+    embeds.append(embed)
+
+    return embeds
 
 
 def split_messages(messages, max_length=2000):
     """
-    Splits a list of messages into chunks, each with a maximum length.
+    Splits a list of messages into chunks, each not exceeding a specified maximum length.
+
+    This function iterates through a list of messages, concatenating them into a single string until adding another
+    message would exceed the maximum length. At that point, it yields the current concatenated string and starts a new
+    one. This process ensures that each chunk is as large as possible without exceeding the maximum length, optimizing
+    the use of space and minimizing the number of chunks.
 
     Args:
-        messages (list): A list of messages to split. Each message is a string.
-        max_length (int, optional): The maximum length of each chunk. Defaults to 2000.
-
-    This function iterates over the list of messages and adds each message to the current chunk.
-    If adding a message to the current chunk would exceed the max_length, it yields the current chunk and starts a new one.
-    After all messages have been processed, it yields the last chunk if it is not empty.
+        messages (list of str): The list of messages to be split into chunks.
+        max_length (int): The maximum allowed length for each chunk. Defaults to 2000 characters.
 
     Yields:
-        str: A chunk of messages. The length of each chunk is less than or equal to max_length.
+        str: A chunk of concatenated messages that does not exceed the maximum length.
     """
     current_message = ""
     for message in messages:
