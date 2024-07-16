@@ -6,6 +6,9 @@ TWITCH_CLIENT_ID=your_twitch_client_id
 TWITCH_CLIENT_SECRET=your_twitch_client_secret
 TENOR_API_KEY=your_tenor_api_key
 TENOR_CLIENT_KEY=your_tenor_client_key
+GPT-EMAIL=your_gpt_email
+GPT-PASSWORD=your_gpt_password
+
 ```
 
 How to get tenor api key & client key : https://developers.google.com/tenor/guides/quickstart
