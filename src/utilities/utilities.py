@@ -1,4 +1,7 @@
 import asyncio
+from datetime import datetime
+
+import re
 import discord
 from discord.ext import commands
 
@@ -67,3 +70,12 @@ def setup_commands(bot):
             await ctx.send(":x: I don't have permission to delete messages.")
         except discord.HTTPException:
             await ctx.send(":x: Failed to delete messages.")
+
+
+def get_current_date_formatted(separator=""):
+    # Get the current date in the specified format (monthdayyear)
+    return datetime.now().strftime(f"%m{separator}%d{separator}%Y")
+
+
+def remove_non_bmp(text):
+    return re.sub(r'[^\u0000-\uFFFF]', '', text)
