@@ -10,7 +10,9 @@ from discord import Option
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
 from discord.ui import Select, View
-from matplotlib import pyplot as plt
+import numpy as np
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 
 from src.ft.bonus.squadbusters.navigation import NavigationView
 from src.ft.ft1.recommendations import generate_recommendations
@@ -138,7 +140,7 @@ async def scheduled_report():
             if all_warnings else "- No warnings found."
 
         if moments_channel:
-            await moments_channel.send(
+            message = await moments_channel.send(
                 f"> # :crystal_ball: **Daily discussion report**\n"
                 f"> ## {get_current_date_formatted(separator="/")}\n"
                 f"> **Sentiment** : \n> - {sentiment}\n"
@@ -147,6 +149,30 @@ async def scheduled_report():
                                                 'No participants found'}"
                 f"\n> **Warnings** : \n> {warnings_description}"
             )
+            # generate word cloud for messages
+            if messages:
+                wordcloud = WordCloud(width=800, height=400, background_color='white').generate(' '.join(messages))
+                plt.figure(figsize=(10, 5))
+                plt.imshow(wordcloud, interpolation='bilinear')
+                plt.axis('off')
+                plt.savefig('wordcloud.png')
+                plt.close()
+                await message.reply(file=discord.File('wordcloud.png'))
+                os.remove('wordcloud.png')
+
+            # generate tree map for warnings
+            if all_warnings:
+                labels = [bot.get_user(int(user_id)).name for user_id in all_warnings.keys()]
+                sizes = [count for count in all_warnings.values()]
+                colors = np.random.rand(len(labels), 3)
+                plt.figure(figsize=(10, 5))
+                plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%')
+                plt.axis('equal')
+                plt.title('Warnings Distribution')
+                plt.savefig('warnings.png')
+                plt.close()
+                await message.reply(file=discord.File('warnings.png'))
+                os.remove('warnings.png')
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
     finally:
