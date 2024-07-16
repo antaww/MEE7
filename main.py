@@ -1,8 +1,9 @@
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import re
 
+import pytz
 from loguru import logger
 
 import discord
@@ -18,7 +19,8 @@ from src.ft.bonus.squadbusters.navigation import NavigationView
 from src.ft.ft1.recommendations import generate_recommendations
 from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
 from src.ft.ft2.icals_to_json import register_user_ical
-from src.ft.ft2.planning import is_everyone_available, download_ical, ensure_temp_dir, TEMP_DIR
+from src.ft.ft2.planning import is_everyone_available, download_ical, ensure_temp_dir, TEMP_DIR, parse_ical_content, \
+    check_availability
 from src.ft.ft3.profanities import handle_profanities
 from src.ft.ft3.warnings import Warnings
 from src.ft.ft4.gifs import handle_gifs_channel
@@ -67,7 +69,7 @@ async def handle_tasks():
     check_streamers.start(bot)
     scheduled_update.start()
     scheduled_reports_save.start()
-    scheduled_report.start()
+    #scheduled_report.start()
 
 
 @tasks.loop(hours=24)
@@ -300,6 +302,63 @@ async def disponibilites(ctx):
     view.add_item(select)
 
     await ctx.respond("Select a user to view their availability:", view=view)
+
+
+def aggregate_weekly_events(directory='user_icals'):
+    aggregated_events = {}
+    current_week_start = get_current_week_start()
+
+    for filename in os.listdir(directory):
+        if filename.endswith('.json'):
+            with open(os.path.join(directory, filename), 'r') as json_file:
+                user_data = json.load(json_file)
+                user_id = str(user_data["user_id"])
+                ical_content = user_data.get("ical_content", "")
+
+                if ical_content:
+                    print(f"Processing iCal content for user {user_id}")
+                    events = parse_ical_content(ical_content)
+                    print(f"Extracted events for user {user_id}: {events}")
+                    if events is None:
+                        continue
+                    week_events = check_availability(events, current_week_start)
+                    print(f"Week availability for user {user_id}: {week_events}")
+
+                    # Convert date keys to string keys
+                    week_events_str_keys = {day.isoformat(): availability for day, availability in week_events.items()}
+
+                    aggregated_events[user_id] = week_events_str_keys
+
+    return aggregated_events
+@bot.command(name="planning", description="Displays the availability of all users for the current week")
+async def planning(ctx):
+    ensure_temp_dir()
+    users = ctx.guild.members
+    users = [user for user in users if not user.bot]
+
+    if not users:
+        await ctx.respond("No users found in the Discord server.")
+        return
+
+    aggregated_events = aggregate_weekly_events()
+
+    if not aggregated_events:
+        await ctx.respond("No events found for the current week.")
+        return
+
+    combined_json = json.dumps(aggregated_events, indent=4)
+
+    # Send the JSON as a file
+    with open("aggregated_events.json", "w") as json_file:
+        json_file.write(combined_json)
+
+    await ctx.respond(file=discord.File("aggregated_events.json"))
+
+
+def get_current_week_start():
+    return datetime.now(pytz.timezone('Europe/Paris')).date() - timedelta(
+        days=datetime.now(pytz.timezone('Europe/Paris')).weekday())
+
 
 
 @bot.command(name="add_streamer", description="Adds a streamer to the list of streamers to check")

@@ -138,8 +138,6 @@ def check_availability(events, start_of_week):
                 availability["evening"] = False
         week_availability[day] = availability
     return week_availability
-
-
 def create_embed_for_week(person, week_availability):
     """
     Creates a Discord embed message displaying a person's availability for each day of a week.
