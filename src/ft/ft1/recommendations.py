@@ -1,6 +1,5 @@
 import os
-from re import search
-
+from googlesearch import search
 import textrazor
 
 
@@ -58,7 +57,7 @@ async def recommend_article(query):
     """
     try:
         # Perform the search and get the results as a generator
-        search_results = search(query, num_results=1)
+        search_results = search(query)
 
         # Convert the generator to a list and get the first result
         search_results_list = list(search_results)
