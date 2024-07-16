@@ -5,6 +5,7 @@ import requests
 import os
 
 from dotenv import load_dotenv
+from loguru import logger
 
 from src.ft.ft4.sentiments import analyze_sentiment
 
@@ -73,4 +74,4 @@ async def handle_gifs_channel(message):
         embed.set_image(url=gif_url)  # Set the image of the embed message to the GIF.
         await message.channel.send(embed=embed)  # Send the embed message to the channel.
     else:
-        print(f"No GIF found for keywords: {message.content}.")
+        logger.error(f"No GIF found for keywords: {message.content}.")

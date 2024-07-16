@@ -3,6 +3,7 @@ import os
 import tempfile
 from datetime import datetime, timezone
 from datetime import timedelta
+from loguru import logger
 
 import discord
 import matplotlib.pyplot as plt
@@ -43,7 +44,7 @@ async def on_ready():
     This function is an event handler that gets triggered when the bot is ready.
     This function doesn't take any arguments and doesn't return anything.
     """
-    print(f'Bot is ready. Logged in as {bot.user}')
+    logger.success(f'Bot is ready. Logged in as {bot.user}')
     await handle_tasks()
 
 
@@ -63,7 +64,7 @@ async def scheduled_update():
 
     This function doesn't take any arguments and doesn't return anything.
     """
-    print("Updating squadbusters data...")
+    logger.info("Updating squadbusters data...")
     os.system("python src/ft/bonus/squadbusters/scraper.py")
 
 
@@ -73,7 +74,7 @@ async def on_message(message: discord.Message):
         return
 
     if message.guild.id != 1252165373256794185:
-        print(f"Message from {message.guild.name}")
+        logger.debug(f"Message from {message.guild.name}")
         return
 
     await handle_profanities(message)
