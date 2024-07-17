@@ -124,6 +124,7 @@ async def scheduled_report():
         moments_channel_id = settings.get('moments_channel_id')
         moments_channel = bot.get_channel(moments_channel_id)
         unique_authors = reports.get_unique_authors()
+        unique_authors = [bot.get_user(int(author_id)).name for author_id in unique_authors]
         all_warnings = warnings.get_all_daily_warnings()
         warnings_description = "\n ".join([f"- **{i + 1}**. {bot.get_user(int(user_id)).mention} - {count} warning(s)"
                                             for i, (user_id, count) in enumerate(all_warnings.items())]) \
@@ -136,7 +137,7 @@ async def scheduled_report():
                                                 f":loudspeaker: **Impactful messages**:\n"
                                                 f" - {'\n - '.join(messages) or 'No impactful messages found'}\n"
                                                 f":busts_in_silhouette: **Participants**:\n"
-                                                f" - {', '.join([f'<@{author}' for author in unique_authors]) or 'No participants found'}\n"
+                                                f" - {', '.join([f'{author}' for author in unique_authors]) or 'No participants found'}\n"
                                                 f":warning: **Warnings**:\n {warnings_description}",
                                     color=0xaa8dd8)
             embed.set_footer(text="MEE7 Daily Report",
