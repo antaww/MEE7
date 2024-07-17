@@ -71,6 +71,11 @@ def setup_commands(bot):
         except discord.HTTPException:
             await ctx.send(":x: Failed to delete messages.")
 
+    @cleanup.error
+    async def cleanup_error(ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.respond(":x: You do not have the required permissions to use this command.")
+
 
 def get_current_date_formatted(separator=""):
     # Get the current date in the specified format (monthdayyear)
