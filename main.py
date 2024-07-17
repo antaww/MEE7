@@ -125,20 +125,23 @@ async def scheduled_report():
         moments_channel = bot.get_channel(moments_channel_id)
         unique_authors = reports.get_unique_authors()
         all_warnings = warnings.get_all_daily_warnings()
-        warnings_description = "\n> ".join([f"- **{i + 1}**. {bot.get_user(int(user_id)).mention} - {count} warning(s)"
+        warnings_description = "\n ".join([f"- **{i + 1}**. {bot.get_user(int(user_id)).mention} - {count} warning(s)"
                                             for i, (user_id, count) in enumerate(all_warnings.items())]) \
             if all_warnings else "- No warnings found."
 
         if moments_channel:
-            message = await moments_channel.send(
-                f"> # :crystal_ball: **Daily discussion report**\n"
-                f"> ## {get_current_date_formatted(separator="/")}\n"
-                f"> **Sentiment** : \n> - {sentiment}\n"
-                f"> **Impactful messages** : \n> - {'\n> - '.join(messages) or 'No impactful messages found'}"
-                f"\n> **Participants** : \n> - {', '.join([f'<@{author}>' for author in unique_authors]) or 
-                                                'No participants found'}"
-                f"\n> **Warnings** : \n> {warnings_description}"
-            )
+            embed = discord.Embed(title=f":crystal_ball: Daily discussion report",
+                                    description=f":date: **Date**: {get_current_date_formatted(separator='/')}\n"
+                                                f":bar_chart: **Sentiment**: {sentiment}\n"
+                                                f":loudspeaker: **Impactful messages**:\n"
+                                                f" - {'\n - '.join(messages) or 'No impactful messages found'}\n"
+                                                f":busts_in_silhouette: **Participants**:\n"
+                                                f" - {', '.join([f'<@{author}' for author in unique_authors]) or 'No participants found'}\n"
+                                                f":warning: **Warnings**:\n {warnings_description}",
+                                    color=0xaa8dd8)
+            embed.set_footer(text="MEE7 Daily Report",
+                                icon_url=settings.get('icon_url'))
+            message = await moments_channel.send(embed=embed)
             # generate word cloud for messages
             if messages:
                 wordcloud = WordCloud(width=800, height=400, background_color='white').generate(' '.join(messages))
@@ -250,13 +253,15 @@ async def scheduled_recommendation():
     channel = bot.get_channel(channel_id)
 
     if channel and recommended_channel:
-        message = await channel.send(
-            f"> # :alarm_clock: **Scheduled recommendation**\n"
-            f"> Analyzing and recommending content in {recommended_channel.name}..."
-        )
-        recommendation = await generate_recommendations(bot, recommended_channel, recommended_channel_id)
+        embed = discord.Embed(title=":alarm_clock: Scheduled Recommendation",
+                                description=f":mag_right: Analyzing and recommending content in {recommended_channel.mention}...",
+                                color=0xe6e7e8)
+        embed.set_footer(text="MEE7 Recommendation System",
+                            icon_url=settings.get('icon_url'))
+        message = await channel.send(embed=embed)
+        recommendation = await generate_recommendations(bot, recommended_channel, recommended_channel_id, discord, settings.get('icon_url'))
 
-        await message.reply(recommendation)
+        await message.reply(embed=recommendation)
 
 
 @bot.command(name="recommend", description="Recommends content based on recent discussions")
@@ -279,8 +284,8 @@ async def recommend(ctx, channel: discord.TextChannel):
     channel_id = channel.id
     channel = bot.get_channel(channel_id)
     if channel:
-        recommendation = await generate_recommendations(bot, channel, channel_id)
-        await ctx.respond(recommendation)
+        recommendation = await generate_recommendations(bot, channel, channel_id, discord, settings.get('icon_url'))
+        await ctx.respond(embed=recommendation)
     else:
         await ctx.respond("Channel not found for analysis.")
 

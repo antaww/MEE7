@@ -71,7 +71,7 @@ async def recommend_article(query):
         return f"An error occurred: {e}"
 
 
-async def generate_recommendations(bot, channel, channel_id):
+async def generate_recommendations(bot, channel, channel_id, discord, icon_url):
     """
     Generates and formats a set of recommendations based on the analysis of topics from recent discussions in a specified channel.
 
@@ -88,10 +88,21 @@ async def generate_recommendations(bot, channel, channel_id):
     The function first calls `analyze_topics` to get the top topics from the channel's recent discussions. If topics are found, it iterates through the top 3 topics, calls `recommend_article` for each to find a related article, and appends this information to the recommendation message. The final message is then returned.
     """
     topics = await analyze_topics(bot, channel_id)
-    recommendation = "No recommendations at this time."
     if topics:  # If there are any topics.
-        recommendation = f"Here are some recommendations based on recent discussions in {channel.mention}:"
+        recommendation = discord.Embed(
+            title=":loudspeaker: Recommendations",
+            description=f":rightwards_pushing_hand: Here are some recommendations based on recent discussions in {channel.mention}:",
+            color=0xe6e7e8
+        )
         for topic in topics[:3]:  # Get the top 3 topics.
             article = await recommend_article(topic)
-            recommendation += f"\n> - **{topic}** - [Read more](<{article}>)"
+            recommendation.add_field(name=topic, value=f":link: [Read more]({article})", inline=False)
+    else:
+        recommendation = discord.Embed(
+            title=":loudspeaker: Recommendations",
+            description=":no_entry: No recommendations at this time.",
+            color=0xe6e7e8
+        )
+    recommendation.set_footer(text="MEE7 Recommendation System",
+                              icon_url=icon_url)
     return recommendation
