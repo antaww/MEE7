@@ -22,6 +22,7 @@ from src.ft.ft1.stream_notifications import check_streamers, validate_streamer
 from src.ft.ft2.icals_to_json import register_user_ical
 from src.ft.ft2.planning import is_everyone_available, download_ical, ensure_temp_dir, TEMP_DIR, parse_ical_content, \
     check_availability
+from src.ft.ft2.weather import get_weather
 from src.ft.ft3.profanities import handle_profanities
 from src.ft.ft3.warnings import Warnings
 from src.ft.ft4.gifs import handle_gifs_channel
@@ -72,6 +73,7 @@ async def handle_tasks():
     scheduled_update.start()
     scheduled_reports_save.start()
     #scheduled_report.start()
+    scheduled_activity_recommendation.start()
 
 
 @tasks.loop(hours=24)
@@ -117,14 +119,14 @@ async def scheduled_reports_save():
 # minimum timing : 2 minutes (free plan limitation : 30 messages per hour)
 @tasks.loop(minutes=3)  # todo: change to hours=24 (for testing purposes, we set it to minutes=3)
 async def scheduled_report():
-    # Do not run the task right after the bot starts
-    # if scheduled_report.current_loop == 0:
-    #     return
+    # Do not run the task right after the bot starts, execute it 1 / 2 timing
+    if scheduled_report.current_loop == 0 or scheduled_report.current_loop % 2 == 0:
+        return
     global gpt
     try:
         gpt = GPT()
         gpt.login()
-        prompt = gpt.generate_prompt()
+        prompt = gpt.generate_report_prompt()
         response = gpt.send_prompt(prompt) if prompt else ""
         logger.debug(f"ChatGPT response: {response}")
         if response:
@@ -185,6 +187,48 @@ async def scheduled_report():
         except OSError:
             pass
 
+
+# scheduled activity recommendation
+@tasks.loop(minutes=3)
+async def scheduled_activity_recommendation():
+    global gpt
+    try:
+        city = "Aix-en-provence"  # todo: call get_location_from_ical
+        date = "2024-07-17"  # todo: call get_date_from_ical
+        weather_datas = get_weather(city, date)
+        # {'date': '2024-07-22', 'city': 'Aix-en-provence', 'weather': 'clear sky', 'temperature': 20.66}
+        gpt = GPT()
+        gpt.login()
+        prompt = gpt.generate_activity_prompt(weather_datas)
+        response = gpt.send_prompt(prompt) if prompt else ""
+        logger.debug(f"ChatGPT response: {response}")
+        if response:
+            activities_names = re.findall(r'Activity \d+: (.*?) :', response)
+            urls = re.findall(r'Activity \d+: .*? : (https?://\S+)', response)
+            print(activities_names)
+            print(urls)
+        else:
+            activities = []
+            urls = []
+        # send the response to moments_channel_id
+        activity_channel_id = settings.get('activity_channel_id')
+        activity_channel = bot.get_channel(activity_channel_id)
+        formatted_date = datetime.strptime(date, '%Y-%m-%d').strftime('%m/%d/%Y')
+        if activity_channel:
+            await activity_channel.send(
+                f"> # :tada: **Activity recommendation at {city}**\n"
+                f"> ## {formatted_date}\n"
+                f"> :white_sun_rain_cloud: **Weather** : {weather_datas['weather']}\n"
+                f"> :thermometer: **Temperature** : {weather_datas['temperature']}°C\n"
+                f"> :hourglass_flowing_sand: **Activities** : \n> - {'\n> - '.join([f'{activity_name} : [Read more]({url})' for activity_name, url in zip(activities_names, urls)]) or 'No activities found'}"
+            )
+    except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")
+    finally:
+        try:
+            gpt.close()
+        except OSError:
+            pass
 
 @tasks.loop(hours=1)
 async def scheduled_recommendation():
