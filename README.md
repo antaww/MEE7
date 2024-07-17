@@ -8,7 +8,7 @@ TENOR_API_KEY=your_tenor_api_key
 TENOR_CLIENT_KEY=your_tenor_client_key
 GPT-EMAIL=your_gpt_email
 GPT-PASSWORD=your_gpt_password
-
+OPENWEATHER_API_KEY=your_openweather_api_key
 ```
 
 How to get tenor api key & client key : https://developers.google.com/tenor/guides/quickstart

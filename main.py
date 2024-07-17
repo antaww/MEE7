@@ -196,7 +196,6 @@ async def scheduled_activity_recommendation():
         city = "Aix-en-provence"  # todo: call get_location_from_ical
         date = "2024-07-17"  # todo: call get_date_from_ical
         weather_datas = get_weather(city, date)
-        # {'date': '2024-07-22', 'city': 'Aix-en-provence', 'weather': 'clear sky', 'temperature': 20.66}
         gpt = GPT()
         gpt.login()
         prompt = gpt.generate_activity_prompt(weather_datas)
