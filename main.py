@@ -117,10 +117,10 @@ async def scheduled_reports_save():
 
 
 # minimum timing : 2 minutes (free plan limitation : 30 messages per hour)
-@tasks.loop(minutes=3)  # todo: change to hours=24 (for testing purposes, we set it to minutes=3)
+@tasks.loop(minutes=6)  # todo: change to hours=24 (for testing purposes, we set it to minutes=3)
 async def scheduled_report():
     # Do not run the task right after the bot starts, execute it 1 / 2 timing
-    if scheduled_report.current_loop == 0 or scheduled_report.current_loop % 2 == 0:
+    if scheduled_report.current_loop == 0:
         return
     global gpt
     try:
@@ -188,7 +188,7 @@ async def scheduled_report():
             pass
 
 
-# scheduled activity recommendation
+# scheduled_activity_recommendation & scheduled_report must be at least 3 minutes apart
 @tasks.loop(minutes=3)
 async def scheduled_activity_recommendation():
     global gpt
