@@ -55,13 +55,12 @@ async def on_ready():
 
 
 async def handle_tasks():
-    scheduled_recommendation.start()
+    # todo: uncomment scheduled, it's commented for testing purposes
+    # scheduled_recommendation.start()
     check_streamers.start(bot)
     scheduled_update.start()
     scheduled_reports_save.start()
-    display_best_days()
-    # scheduled_report.start()
-    scheduled_activity_recommendation.start()
+    # scheduled_activity_recommendation.start()
 
 
 @tasks.loop(hours=24)
@@ -105,7 +104,7 @@ async def scheduled_reports_save():
 
 
 # minimum timing : 2 minutes (free plan limitation : 30 messages per hour)
-@tasks.loop(minutes=6)  # todo: change to hours=24 (for testing purposes, we set it to minutes=3)
+@tasks.loop(minutes=6, hours=24)
 async def scheduled_report():
     global gpt
     try:
@@ -113,9 +112,9 @@ async def scheduled_report():
         gpt.login()
         prompt = gpt.generate_report_prompt()
         response = gpt.send_prompt(prompt) if prompt else ""
-        logger.debug(f"ChatGPT response: {response}")
         if response:
-            messages = re.findall(r'\[Message \d+] "(.*?)"', response)
+            logger.success(f"ChatGPT response generated.")
+            messages = re.findall(r'\[Message \d+\] "(.*?)"', response)
             sentiment_match = re.search(r'Global sentiment: (.*)"', response)
             sentiment = sentiment_match.group(1) if sentiment_match else "No sentiment found"
         else:
@@ -136,7 +135,7 @@ async def scheduled_report():
                 f"> ## {get_current_date_formatted(separator="/")}\n"
                 f"> **Sentiment** : \n> - {sentiment}\n"
                 f"> **Impactful messages** : \n> - {'\n> - '.join(messages) or 'No impactful messages found'}"
-                f"\n> **Participants** : \n> - {', '.join([f'<@{author}>' for author in unique_authors]) or
+                f"\n> **Participants** : \n> - {', '.join([f'<@{author}>' for author in unique_authors]) or 
                                                 'No participants found'}"
                 f"\n> **Warnings** : \n> {warnings_description}"
             )
@@ -173,8 +172,8 @@ async def scheduled_report():
             pass
 
 
-# scheduled_activity_recommendation & scheduled_report must be at least 3 minutes apart
-@tasks.loop(minutes=3)
+# scheduled_activity_recommendation & scheduled_report must be at least 3 minutes apart to avoid conflicts
+@tasks.loop(minutes=3, hours=24)
 async def scheduled_activity_recommendation():
     global gpt
     try:
@@ -215,8 +214,24 @@ async def scheduled_activity_recommendation():
     finally:
         try:
             gpt.close()
+            if not scheduled_report.is_running():
+                # Start the scheduled report task after the activity recommendation task to avoid conflicts
+                start_scheduled_report.start()
         except OSError:
             pass
+
+
+@tasks.loop(minutes=3)
+async def start_scheduled_report():
+    # Do not start the task on the first loop, so that we add a delay
+    if start_scheduled_report.current_loop == 0:
+        logger.debug("Delaying the start of the scheduled report task, starting in 3 minutes...")
+        return
+    if not scheduled_report.is_running():
+        logger.info("Starting the scheduled report task...")
+        scheduled_report.start()
+        logger.success("Scheduled report task started.")
+        start_scheduled_report.stop()
 
 @tasks.loop(hours=1)
 async def scheduled_recommendation():
