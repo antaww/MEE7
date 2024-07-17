@@ -1,3 +1,92 @@
+# 🎉 Welcome to MEE7 Bot! 
+
+
+## 🤖 What is MEE7 Bot? 
+MEE7 is a Discord bot that offers a variety of features to help you manage your Discord server and engage with your community. With MEE7, you can add streamers for live notifications, clean up chat messages, display common availability for scheduling, recommend content based on discussions, register iCal files for availability checks, and more.
+
+MEE7 is designed to enhance your Discord server experience by providing useful tools and features to keep your community active, organized, and engaged. Whether you're a streamer, a content creator, or a community manager, MEE7 has something for everyone.
+
+## MEE7 Bot Commands 
+
+Welcome to the MEE7 Discord Bot command guide! Here are the commands for the MEE7 bot, along with their explanations to help you manage and engage with your community effectively.
+
+
+
+
+
+<!-- TOC -->
+* [MEE7 Bot Commands 🎉](#mee7-bot-commands-)
+  * [Commands](#commands)
+    * [📺 add_streamer](#-add_streamer)
+    * [🧹 cleanup](#-cleanup)
+    * [📆 display_common_availability](#-display_common_availability)
+    * [📅 disponibilites](#-disponibilites)
+    * [📢 recommend](#-recommend)
+    * [📂 register_ical](#-register_ical)
+    * [🎮 sb-ultras](#-sb-ultras)
+    * [🥇 top10messages](#-top10messages)
+    * [⚠️ warnings](#-warnings)
+  * [Contributing 🤝](#contributing-)
+  * [Authors 📝](#authors-)
+<!-- TOC -->
+
+Let's explore the commands offered by MEE7 to help you make the most of your Discord server!
+
+## Commands
+
+### 📺 add_streamer
+
+Description: Adds a streamer to the list of streamers to check for live notifications. 
+- Usage: ```/add_streamer <streamer_name>```
+
+### 🧹 cleanup
+Description: Cleans up the last 10 messages in the channel to maintain a tidy chat environment.
+- Usage: ```/cleanup```
+
+### 📆 display_common_availability
+Description: Displays the common availability of all users for the current week, helping to find the best times for group events.
+
+- Usage: ```/display_common_availability```
+
+### 📅 disponibilites
+Description: Displays the availabilities of all persons in the Discord server to facilitate scheduling and coordination.
+- Usage: ```/disponibilites```
+
+### 📢 recommend
+Description: Recommends content based on recent discussions to keep the community engaged with relevant topics.
+- Usage: ```/recommend```
+
+### 📂 register_ical
+Description: Register your iCal file for availability checks to streamline event planning.
+- Usage: ```/register_ical <iCal_link>```
+
+### 🎮 sb-ultras
+Description: Displays the list of ultra abilities, providing information on special commands or features.
+- Usage: ```/sb-ultras```
+
+### 🥇 top10messages
+Description: Displays the top 10 users who sent the most messages today, encouraging active participation.
+- Usage: ```/top10messages```
+
+### ⚠️ warnings
+Description: Displays the warnings for a user or all users, helping to monitor and manage user behavior.
+- Usage: ```/warnings <user>```
+
+With these commands, you can effectively manage your Discord community, keep the environment tidy, facilitate scheduling, and engage users with relevant content and activities. Enjoy your time with MEE7! 🎉
+
+## Contributing 🤝
+Contributions are welcome! If you'd like to add new features, improve existing ones, or fix bugs, feel free to create a pull request.
+
+## Authors 📝
+- [Anta](https://github.com/antaww)
+- [Kerr](https://github.com/Mkheir13)
+
+Transform your Discord server into a dynamic and well-managed community with MEE7! 🎊✨
+
+
+## Configurations
+
+
 Config .env file : 
 ```
 DISCORD_BOT_TOKEN=your_discord_bot_token
