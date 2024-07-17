@@ -67,7 +67,6 @@ async def handle_gifs_channel(message):
     This function doesn't return anything.
     """
     sentiment = analyze_sentiment(message.content)  # Analyze the sentiment of the message content.
-    # todo: find a way to implement sentiment
     gif_url = search_gif(message.content)  # Search for a GIF based on the keywords.
     if gif_url:
         embed = discord.Embed()  # Create a new embed message.

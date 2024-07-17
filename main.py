@@ -119,9 +119,6 @@ async def scheduled_reports_save():
 # minimum timing : 2 minutes (free plan limitation : 30 messages per hour)
 @tasks.loop(minutes=6)  # todo: change to hours=24 (for testing purposes, we set it to minutes=3)
 async def scheduled_report():
-    # Do not run the task right after the bot starts, execute it 1 / 2 timing
-    if scheduled_report.current_loop == 0:
-        return
     global gpt
     try:
         gpt = GPT()
@@ -193,34 +190,38 @@ async def scheduled_report():
 async def scheduled_activity_recommendation():
     global gpt
     try:
-        city = "Aix-en-provence"  # todo: call get_location_from_ical
-        date = "2024-07-17"  # todo: call get_date_from_ical
+        city = settings.get('city')
+        date = datetime.now().strftime('%Y-%m-%d')
         weather_datas = get_weather(city, date)
         gpt = GPT()
         gpt.login()
         prompt = gpt.generate_activity_prompt(weather_datas)
         response = gpt.send_prompt(prompt) if prompt else ""
-        logger.debug(f"ChatGPT response: {response}")
         if response:
-            activities_names = re.findall(r'Activity \d+: (.*?) :', response)
-            urls = re.findall(r'Activity \d+: .*? : (https?://\S+)', response)
-            print(activities_names)
-            print(urls)
+            logger.success(f"ChatGPT response generated.")
+            activities = response.split("[")[1].rsplit("]")[0]
+            activities = f"[{activities}]"
+            activities_json = json.loads(activities)
+            activities_names = [activity['activity'] for activity in activities_json]
+            urls = [activity['url'] for activity in activities_json]
         else:
-            activities = []
+            activities_names = []
             urls = []
         # send the response to moments_channel_id
         activity_channel_id = settings.get('activity_channel_id')
         activity_channel = bot.get_channel(activity_channel_id)
         formatted_date = datetime.strptime(date, '%Y-%m-%d').strftime('%m/%d/%Y')
         if activity_channel:
-            await activity_channel.send(
-                f"> # :tada: **Activity recommendation at {city}**\n"
-                f"> ## {formatted_date}\n"
-                f"> :white_sun_rain_cloud: **Weather** : {weather_datas['weather']}\n"
-                f"> :thermometer: **Temperature** : {weather_datas['temperature']}°C\n"
-                f"> :hourglass_flowing_sand: **Activities** : \n> - {'\n> - '.join([f'{activity_name} : [Read more]({url})' for activity_name, url in zip(activities_names, urls)]) or 'No activities found'}"
-            )
+            embed = discord.Embed(title=f":tada: Activity recommendation at {city}",
+                                  description=f":date: **Date**: {formatted_date}\n"
+                                              f":white_sun_rain_cloud: **Weather**: {weather_datas['weather']}\n"
+                                              f":thermometer: **Temperature**: {weather_datas['temperature']}°C",
+                                  color=0xfd6ce4)
+            embed.set_footer(text="MEE7 Activity Recommendation",
+                             icon_url=settings.get('icon_url'))
+            for activity_name, url in zip(activities_names, urls):
+                embed.add_field(name=f":placard: {activity_name}", value=f":link: [Read more]({url})", inline=False)
+            await activity_channel.send(embed=embed)
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
     finally:
