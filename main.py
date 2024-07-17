@@ -2,7 +2,8 @@ import json
 import os
 from datetime import datetime, timezone, timedelta
 import re
-
+from datetime import datetime
+import locale
 import pytz
 from loguru import logger
 
@@ -39,6 +40,7 @@ settings = Settings()
 warnings = Warnings()
 reports = Reports()
 
+locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
 
 def load_user_icals(directory='user_icals'):
     user_icals = {}
@@ -275,6 +277,7 @@ async def register_ical(ctx, url: discord.Option(discord.SlashCommandOptionType.
     temp_file_path = os.path.join(TEMP_DIR, 'temp.ics')
     await download_ical(url, temp_file_path, ctx)
     await register_user_ical(ctx.author.id, ctx.author.name, temp_file_path, user_icals)
+    await planning(ctx)
     await ctx.respond(f":white_check_mark: Your iCal file has been registered successfully.")
 
 
@@ -316,13 +319,10 @@ def aggregate_weekly_events(directory='user_icals'):
                 ical_content = user_data.get("ical_content", "")
 
                 if ical_content:
-                    print(f"Processing iCal content for user {user_id}")
                     events = parse_ical_content(ical_content)
-                    print(f"Extracted events for user {user_id}: {events}")
                     if events is None:
                         continue
                     week_events = check_availability(events, current_week_start)
-                    print(f"Week availability for user {user_id}: {week_events}")
 
                     # Convert date keys to string keys
                     week_events_str_keys = {day.isoformat(): availability for day, availability in week_events.items()}
@@ -330,7 +330,6 @@ def aggregate_weekly_events(directory='user_icals'):
                     aggregated_events[user_id] = week_events_str_keys
 
     return aggregated_events
-@bot.command(name="planning", description="Displays the availability of all users for the current week")
 async def planning(ctx):
     ensure_temp_dir()
     users = ctx.guild.members
@@ -352,14 +351,59 @@ async def planning(ctx):
     with open("aggregated_events.json", "w") as json_file:
         json_file.write(combined_json)
 
-    await ctx.respond(file=discord.File("aggregated_events.json"))
+@bot.command(name="display_common_availability", description="Displays common availability of all users for the current week")
+async def display_common_availability(ctx):
+    weekly_events = aggregate_weekly_events()
+    all_users = ctx.guild.members
 
+    time_slots = ["morning", "afternoon", "evening"]
+
+    common_availability = {}
+
+    for user in all_users:
+        user_id = str(user.id)
+        if user_id in weekly_events:
+            user_name = user.display_name
+            for day, times in weekly_events[user_id].items():
+                if day not in common_availability:
+                    common_availability[day] = {slot: [] for slot in time_slots}
+                for time_slot in time_slots:
+                    if times.get(time_slot) is True:
+                        common_availability[day][time_slot].append(user_name)
+
+    max_availability = {slot: 0 for slot in time_slots}
+    for slots in common_availability.values():
+        for time_slot, users in slots.items():
+            max_availability[time_slot] = max(max_availability[time_slot], len(users))
+
+    embed = discord.Embed(title="Common Availability for All Users", color=discord.Color.green())
+
+    for day, slots in common_availability.items():
+
+        date_obj = datetime.strptime(day, '%Y-%m-%d')
+        french_day = date_obj.strftime('%A %d %B')
+        french_day = french_day.capitalize()
+
+        morning_users = ", ".join(slots["morning"])
+        afternoon_users = ", ".join(slots["afternoon"])
+        evening_users = ", ".join(slots["evening"])
+
+        day_star = ""
+        if all(len(slots[slot]) > 0 for slot in time_slots):
+            day_star = "⭐"
+
+        availability_str = (
+            f"```\nMatin: {morning_users}\n"
+            f"Après-midi: {afternoon_users}\n"
+            f"Soir: {evening_users}\n```"
+        )
+        embed.add_field(name=f"{french_day} {day_star}", value=availability_str, inline=False)
+
+    await ctx.respond(embed=embed)
 
 def get_current_week_start():
     return datetime.now(pytz.timezone('Europe/Paris')).date() - timedelta(
         days=datetime.now(pytz.timezone('Europe/Paris')).weekday())
-
-
 
 @bot.command(name="add_streamer", description="Adds a streamer to the list of streamers to check")
 @commands.has_permissions(administrator=True)
