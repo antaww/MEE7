@@ -1,19 +1,19 @@
 import json
+import locale
 import os
-from datetime import datetime, timezone, timedelta
 import re
 from datetime import datetime
-import locale
-import pytz
-from loguru import logger
+from datetime import timezone, timedelta
 
 import discord
+import matplotlib.pyplot as plt
+import numpy as np
+import pytz
 from discord import Option
 from discord.ext import tasks, commands
-from dotenv import load_dotenv
 from discord.ui import Select, View
-import numpy as np
-import matplotlib.pyplot as plt
+from dotenv import load_dotenv
+from loguru import logger
 from wordcloud import WordCloud
 
 from src.ft.bonus.squadbusters.navigation import NavigationView
@@ -43,19 +43,6 @@ reports = Reports()
 
 locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
 
-def load_user_icals(directory='user_icals'):
-    user_icals = {}
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    for filename in os.listdir(directory):
-        if filename.endswith('.json'):
-            user_id = filename.split('.')[0]
-            user_icals[user_id] = os.path.join(directory, filename)
-    return user_icals
-
-
-user_icals = load_user_icals()
-
 
 @bot.event
 async def on_ready():
@@ -72,7 +59,8 @@ async def handle_tasks():
     check_streamers.start(bot)
     scheduled_update.start()
     scheduled_reports_save.start()
-    #scheduled_report.start()
+    display_best_days()
+    # scheduled_report.start()
     scheduled_activity_recommendation.start()
 
 
@@ -127,7 +115,7 @@ async def scheduled_report():
         response = gpt.send_prompt(prompt) if prompt else ""
         logger.debug(f"ChatGPT response: {response}")
         if response:
-            messages = re.findall(r'\[Message \d+\] "(.*?)"', response)
+            messages = re.findall(r'\[Message \d+] "(.*?)"', response)
             sentiment_match = re.search(r'Global sentiment: (.*)"', response)
             sentiment = sentiment_match.group(1) if sentiment_match else "No sentiment found"
         else:
@@ -148,7 +136,7 @@ async def scheduled_report():
                 f"> ## {get_current_date_formatted(separator="/")}\n"
                 f"> **Sentiment** : \n> - {sentiment}\n"
                 f"> **Impactful messages** : \n> - {'\n> - '.join(messages) or 'No impactful messages found'}"
-                f"\n> **Participants** : \n> - {', '.join([f'<@{author}>' for author in unique_authors]) or 
+                f"\n> **Participants** : \n> - {', '.join([f'<@{author}>' for author in unique_authors]) or
                                                 'No participants found'}"
                 f"\n> **Warnings** : \n> {warnings_description}"
             )
@@ -315,43 +303,142 @@ async def display_warnings(ctx, user: discord.User = None):
         await ctx.respond(embed=embed)
 
 
+def load_user_icals(directory='user_icals'):
+    """
+    Loads user iCal data from JSON files within a specified directory.
+
+    This function scans a given directory for JSON files, each expected to contain iCal data for a user. It constructs
+    a dictionary mapping user IDs (extracted from the filenames) to the full path of their respective JSON file. If the
+    specified directory does not exist, it is created.
+
+    Args:
+        directory (str): The directory to scan for JSON files. Defaults to 'user_icals'.
+
+    Returns:
+        dict: A dictionary where keys are user IDs (str) and values are the paths (str) to their iCal JSON files.
+    """
+    users_icals = {}
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    for filename in os.listdir(directory):
+        if filename.endswith('.json'):
+            user_id = filename.split('.')[0]
+            users_icals[user_id] = os.path.join(directory, filename)
+    return users_icals
+
+
+user_icals = load_user_icals()
+
+
 @bot.command(name="register_ical", description="Register your iCal file for availability checks")
 async def register_ical(ctx, url: discord.Option(discord.SlashCommandOptionType.string)):
-    ensure_temp_dir()
-    temp_file_path = os.path.join(TEMP_DIR, 'temp.ics')
-    await download_ical(url, temp_file_path, ctx)
-    await register_user_ical(ctx.author.id, ctx.author.name, temp_file_path, user_icals)
-    await planning(ctx)
-    await ctx.respond(f":white_check_mark: Your iCal file has been registered successfully.")
+    """
+    Registers a user's iCal file for availability checks by downloading it and associating it with their Discord ID.
+
+    This command is triggered by a Discord slash command. It first ensures that a temporary directory exists for storing
+    iCal files. Then, it downloads the iCal file from the provided URL to a temporary file. After downloading,
+    it registers
+    the user's iCal file by associating the temporary file path with the user's Discord ID and name in a global
+    dictionary.
+    Finally, it performs an initial planning operation (e.g., checking availability) and responds to the user indicating
+    successful registration.
+
+    Args:
+        ctx: The context of the command, which includes information about the channel, guild, and user who invoked.
+        url: A string representing the URL of the iCal file to be downloaded and registered.
+
+    Returns:
+        None. The function's primary side effects are downloading a file, updating a global dictionary, performing an
+        initial planning operation, and sending a response message to the Discord channel.
+    """
+    ensure_temp_dir()  # Ensure the temporary directory for iCal files exists.
+    temp_file_path = os.path.join(TEMP_DIR, 'temp.ics')  # Define the path for the temporary iCal file.
+    await download_ical(url, temp_file_path, ctx)  # Download the iCal file from the provided URL.
+    await register_user_ical(ctx.author.id, ctx.author.name, temp_file_path,
+                             user_icals)  # Register the user's iCal file.
+    await planning(ctx)  # Perform an initial planning operation with the newly registered iCal file.
+    await ctx.respond(f":white_check_mark: Your iCal file has been registered successfully.")  # Respond to the user.
 
 
 @bot.command(name="disponibilites", description="Displays the availabilities of all persons in the Discord server")
 async def disponibilites(ctx):
+    """
+    A Discord bot command to display the availability of all members in the server.
+
+    This command retrieves all non-bot from the guild (server) and presents a selection menu to the command invoker.
+    Upon selection of a user, it fetches the user's availability from a JSON file named after the user's ID and displays
+    it in the Discord channel.
+
+    Args:
+        ctx: The context under which the command is executed. Contains information and methods related to the command
+        invocation.
+
+    Returns:
+        None. This function operates by sending messages to a Discord channel.
+    """
+    # Retrieve all non-bot members from the guild
     users = ctx.guild.members
     users = [user for user in users if not user.bot]
 
+    # If no users are found, send a response and return
     if not users:
         await ctx.respond("No users found in the Discord server.")
         return
 
+    # Create selection options for each user
     options = [discord.SelectOption(label=member.display_name, value=str(member.id)) for member in users]
 
+    # Create a selection menu with the user options
     select = Select(placeholder="Choose a user", options=options)
+
     async def select_callback(interaction):
+        """
+        Callback function for when a user is selected from the dropdown.
+
+        Fetches the selected user's availability from a JSON file and sends it as an embed in the Discord channel.
+
+        Args:
+            interaction: The interaction object representing the user's selection.
+
+        Returns:
+            None. Sends messages to a Discord channel.
+        """
+        # Retrieve the selected user's ID from the selection
         user_id = int(select.values[0])
+        # Show typing indicator while processing
         async with ctx.typing():
+            # Fetch and display the selected user's availability
             embeds = await is_everyone_available(ctx, f"user_icals/{user_id}.json")
             for embed in embeds:
                 await ctx.respond(embed=embed)
 
+    # Assign the callback to the selection
     select.callback = select_callback
+    # Create a view and add the selection menu to it
     view = View()
     view.add_item(select)
 
+    # Send the selection menu to the Discord channel
     await ctx.respond("Select a user to view their availability:", view=view)
 
 
 def aggregate_weekly_events(directory='user_icals'):
+    """
+    Aggregates weekly events for all users from JSON files within a specified directory.
+
+    This function scans a directory for JSON files, each representing a user's event data. For each file,
+    it extracts the user's ID and iCal content, then parses the iCal content to determine the user's availability
+    for the current week. The availability data is aggregated into a dictionary, keyed by user ID, with each value
+    being another dictionary mapping ISO-formatted dates to availability information.
+
+    Args:
+        directory (str): The directory to scan for user JSON files. Defaults to 'user_icals'.
+
+    Returns:
+        dict: A dictionary where each key is a user ID (str) and each value is a dictionary. The value dictionary
+              maps ISO-formatted dates (str) to availability information (dict), which indicates the user's
+              availability for morning, afternoon, and evening of each day in the current week.
+    """
     aggregated_events = {}
     current_week_start = get_current_week_start()
 
@@ -368,35 +455,64 @@ def aggregate_weekly_events(directory='user_icals'):
                         continue
                     week_events = check_availability(events, current_week_start)
 
-                    # Convert date keys to string keys
                     week_events_str_keys = {day.isoformat(): availability for day, availability in week_events.items()}
 
                     aggregated_events[user_id] = week_events_str_keys
 
     return aggregated_events
+
+
 async def planning(ctx):
-    ensure_temp_dir()
-    users = ctx.guild.members
-    users = [user for user in users if not user.bot]
+    """
+    Asynchronously plans and aggregates weekly events for all non-bot users in a Discord server.
+
+    Args:
+        ctx: The context from which this function is called. Provides access to Discord server information and
+             methods for responding to events.
+
+    Returns:
+        None. This function primarily interacts with the Discord API to send messages and does not return any value.
+    """
+    ensure_temp_dir()  # Ensure the temporary directory for storing files exists.
+    users = ctx.guild.members  # Retrieve all members from the guild (Discord server).
+    users = [user for user in users if not user.bot]  # Filter out bot users.
 
     if not users:
-        await ctx.respond("No users found in the Discord server.")
+        await ctx.respond("No users found in the Discord server.")  # Respond if no non-bot users are found.
         return
 
-    aggregated_events = aggregate_weekly_events()
+    aggregated_events = aggregate_weekly_events()  # Aggregate weekly events for the users.
 
     if not aggregated_events:
-        await ctx.respond("No events found for the current week.")
+        await ctx.respond("No events found for the current week.")  # Respond if no events are aggregated.
         return
 
-    combined_json = json.dumps(aggregated_events, indent=4)
+    combined_json = json.dumps(aggregated_events,
+                               indent=4)  # Convert the aggregated events into a formatted JSON string.
 
-    # Send the JSON as a file
+    # Write the JSON string to a file for storage or further processing.
     with open("aggregated_events.json", "w") as json_file:
         json_file.write(combined_json)
 
-@bot.command(name="display_common_availability", description="Displays common availability of all users for the current week")
+
+@bot.command(name="display_common_availability",
+             description="Displays common availability of all users for the current week")
 async def display_common_availability(ctx):
+    """
+    Displays the common availability of all users in the Discord server for the current week.
+
+    This command aggregates the availability of all users for the current week and presents it in an embed message.
+    The availability is categorized into three time slots: morning, afternoon, and evening. For each day of the
+    current week, the command lists the users available during these time slots. Days when users are available
+    across all time slots are highlighted with a star symbol.
+
+    Args:
+        ctx: The context under which the command is executed. Contains information about the guild, channel, and user.
+
+    Returns:
+        An embed message sent to the channel from which the command was invoked. The message contains the common
+        availability of users for each day of the current week, categorized into morning, afternoon, and evening.
+    """
     weekly_events = aggregate_weekly_events()
     all_users = ctx.guild.members
 
@@ -422,6 +538,8 @@ async def display_common_availability(ctx):
 
     embed = discord.Embed(title="Common Availability for All Users", color=discord.Color.green())
 
+    dates_with_stars = []
+
     for day, slots in common_availability.items():
 
         date_obj = datetime.strptime(day, '%Y-%m-%d')
@@ -435,19 +553,77 @@ async def display_common_availability(ctx):
         day_star = ""
         if all(len(slots[slot]) > 0 for slot in time_slots):
             day_star = "⭐"
+            dates_with_stars.append(day)
 
         availability_str = (
-            f"```\nMatin: {morning_users}\n"
-            f"Après-midi: {afternoon_users}\n"
-            f"Soir: {evening_users}\n```"
+            f"```\nMorning : {morning_users}\n"
+            f"Afternoon : {afternoon_users}\n"
+            f"Evening : {evening_users}\n```"
         )
         embed.add_field(name=f"{french_day} {day_star}", value=availability_str, inline=False)
-
     await ctx.respond(embed=embed)
+
+
+def display_best_days():
+    """
+    Identifies and returns the days when all users have common availability in all time slots.
+
+    This function aggregates weekly events for all users, iterates through each user's events,
+    and builds a dictionary mapping each day to the users available during morning, afternoon, and evening slots.
+    It then identifies days when there is at least one user available in each time slot and returns these days.
+
+    The function assumes the existence of a `aggregate_weekly_events` function that aggregates events for all users
+    and a `get_display_name_from_id` function that returns a user's display name given their user ID.
+
+    Returns:
+        list: A list of dates (as strings) where all users have common availability in all time slots.
+    """
+    weekly_events = aggregate_weekly_events()
+    all_users = []
+
+    # Loop through the files in the 'user_icals' directory to get user IDs
+    for filename in os.listdir('user_icals'):
+        if filename.endswith('.json'):
+            with open(os.path.join('user_icals', filename), 'r') as json_file:
+                user_data = json.load(json_file)
+                user_id = str(user_data["user_id"])
+                all_users.append(user_id)
+
+    time_slots = ["morning", "afternoon", "evening"]
+
+    common_availability = {}
+
+    # Iterate over all users to build the common availability dictionary
+    for user_id in all_users:
+        if user_id in weekly_events:
+            # Assuming you have a way to get the display name from the user_id
+            user_name = get_display_name_from_id(user_id)  # Placeholder function
+            for day, times in weekly_events[user_id].items():
+                if day not in common_availability:
+                    common_availability[day] = {slot: [] for slot in time_slots}
+                for time_slot in time_slots:
+                    if times.get(time_slot):
+                        common_availability[day][time_slot].append(user_name)
+
+    max_availability = {slot: 0 for slot in time_slots}
+    for slots in common_availability.values():
+        for time_slot, users in slots.items():
+            max_availability[time_slot] = max(max_availability[time_slot], len(users))
+    dates_with_stars = []
+    for day, slots in common_availability.items():
+        if all(len(slots[slot]) > 0 for slot in time_slots):
+            dates_with_stars.append(day)
+    return dates_with_stars
+
+
+def get_display_name_from_id(user_id):
+    return f"User_{user_id}"
+
 
 def get_current_week_start():
     return datetime.now(pytz.timezone('Europe/Paris')).date() - timedelta(
         days=datetime.now(pytz.timezone('Europe/Paris')).weekday())
+
 
 @bot.command(name="add_streamer", description="Adds a streamer to the list of streamers to check")
 @commands.has_permissions(administrator=True)
