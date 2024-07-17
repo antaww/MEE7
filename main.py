@@ -55,13 +55,11 @@ async def on_ready():
 
 
 async def handle_tasks():
-    scheduled_recommendation.start()
+    #scheduled_recommendation.start()
     check_streamers.start(bot)
     scheduled_update.start()
     scheduled_reports_save.start()
-    display_best_days()
-    # scheduled_report.start()
-    scheduled_activity_recommendation.start()
+    #scheduled_activity_recommendation.start()
 
 
 @tasks.loop(hours=24)
@@ -365,7 +363,7 @@ async def disponibilites(ctx):
     """
     A Discord bot command to display the availability of all members in the server.
 
-    This command retrieves all non-bot from the guild (server) and presents a selection menu to the command invoker.
+    This command retrieves all non-bot members from the guild (server) and presents a selection menu to the command invoker.
     Upon selection of a user, it fetches the user's availability from a JSON file named after the user's ID and displays
     it in the Discord channel.
 
@@ -405,12 +403,23 @@ async def disponibilites(ctx):
         """
         # Retrieve the selected user's ID from the selection
         user_id = int(select.values[0])
+        file_path = f"user_icals/{user_id}.json"
+
+        # Check if the file exists
+        if not os.path.exists(file_path):
+            await interaction.response.send_message(
+                f"No availability data found for {interaction.guild.get_member(user_id).display_name}.")
+            return
+
         # Show typing indicator while processing
         async with ctx.typing():
-            # Fetch and display the selected user's availability
-            embeds = await is_everyone_available(ctx, f"user_icals/{user_id}.json")
-            for embed in embeds:
-                await ctx.respond(embed=embed)
+            try:
+                # Fetch and display the selected user's availability
+                embeds = await is_everyone_available(ctx, file_path)
+                for embed in embeds:
+                    await interaction.response.send_message(embed=embed)
+            except Exception as e:
+                await interaction.response.send_message(f"An error occurred while retrieving the data: {str(e)}")
 
     # Assign the callback to the selection
     select.callback = select_callback
@@ -491,7 +500,9 @@ async def planning(ctx):
                                indent=4)  # Convert the aggregated events into a formatted JSON string.
 
     # Write the JSON string to a file for storage or further processing.
-    with open("aggregated_events.json", "w") as json_file:
+    if not os.path.exists("events_state"):
+        os.makedirs("events_state")
+    with open("events_state/aggregated_events.json", "w") as json_file:
         json_file.write(combined_json)
 
 

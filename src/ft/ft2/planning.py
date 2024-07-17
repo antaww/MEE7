@@ -87,7 +87,9 @@ def parse_ical_content(ical_content: str, timezone: str = 'Europe/Paris'):
                 end = datetime.combine(end, time.min).replace(tzinfo=pytz.timezone(timezone))
             events[start.date()].append((summary, start, end))
 
-    with open('events_locations.json', 'w') as f:
+    if not os.path.exists('events_locations'):
+        os.makedirs('events_locations')
+    with open('events_locations/events_locations.json', 'w') as f:
         json.dump(EVENTS, f)
     return events
 
