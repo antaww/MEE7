@@ -8,7 +8,6 @@ from selenium.webdriver.chrome.options import Options
 import undetected_chromedriver as uc
 from loguru import logger
 
-from src.ft.ft2.weather import get_weather
 from src.ft.ft5.reports import Reports
 from src.utilities.utilities import remove_non_bmp
 
