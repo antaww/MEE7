@@ -55,12 +55,11 @@ async def on_ready():
 
 
 async def handle_tasks():
-    # todo: uncomment scheduled, it's commented for testing purposes
-    # scheduled_recommendation.start()
+    scheduled_recommendation.start()
     check_streamers.start(bot)
     scheduled_update.start()
     scheduled_reports_save.start()
-    # scheduled_activity_recommendation.start()
+    scheduled_activity_recommendation.start()
 
 
 @tasks.loop(hours=24)
@@ -381,8 +380,8 @@ async def register_ical(ctx, url: discord.Option(discord.SlashCommandOptionType.
     await ctx.respond(f":white_check_mark: Your iCal file has been registered successfully.")  # Respond to the user.
 
 
-@bot.command(name="disponibilites", description="Displays the availabilities of all persons in the Discord server")
-async def disponibilites(ctx):
+@bot.command(name="availability", description="Displays the availabilities of all persons in the Discord server")
+async def availability(ctx):
     """
     A Discord bot command to display the availability of all members in the server.
 
@@ -763,6 +762,68 @@ async def sb_ultras(ctx, character: Option(str, "The character name (Archer Quee
     view = NavigationView(characters, abilities_data, start_index)
     embed = view.update_embed()
     await ctx.respond(embed=embed, view=view)
+
+
+
+@bot.slash_command(name="raids", description="Display the list of raids and their steps")
+async def raids(ctx):
+    raids = ["Vow of the Disciple"]
+    raid_options = [discord.SelectOption(label=raid, value=raid) for raid in raids]
+
+    raid_select = Select(placeholder="Choose a raid...", options=raid_options)
+
+    async def raid_select_callback(interaction):
+        selected_raid = raid_select.values[0]
+
+        if selected_raid not in raids:
+            await interaction.response.send_message("Option invalide.", ephemeral=True)
+            return
+
+        raid_path = os.path.join(os.getcwd(), "src/ft/bonus/destiny/", selected_raid)
+        if not os.path.exists(raid_path):
+            await interaction.response.send_message(f"Dossier {raid_path} introuvable.", ephemeral=True)
+            return
+
+        etapes = [etape.split('.')[0] for etape in os.listdir(raid_path) if etape.endswith('.txt')]
+        etapes = [etape.replace("_", " ") for etape in etapes]
+        etape_options = [discord.SelectOption(label=etape, value=etape) for etape in etapes]
+
+        etape_select = Select(placeholder="Choose a step...", options=etape_options)
+
+        async def etape_select_callback(interaction):
+            selected_etape = etape_select.values[0]
+
+            file_path = os.path.join(raid_path, f'{selected_etape.lower().replace(" ", "_")}.txt')
+
+            if not os.path.isfile(file_path):
+                await interaction.response.send_message(f"Fichier {file_path} introuvable.", ephemeral=True)
+                return
+
+            try:
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    content = file.read()
+            except Exception as e:
+                await interaction.response.send_message(f"Erreur lors de la lecture du fichier : {e}", ephemeral=True)
+                return
+
+            embed = discord.Embed(title=f"{selected_raid} - {selected_etape}", description=content, color=discord.Color.blue())
+            embed.set_image(url=content.split('\n')[0])
+
+            await interaction.response.send_message(embed=embed, ephemeral=False)
+
+        etape_select.callback = etape_select_callback
+
+        etape_view = View()
+        etape_view.add_item(etape_select)
+
+        await interaction.response.send_message("Select a step :", view=etape_view, ephemeral=False)
+
+    raid_select.callback = raid_select_callback
+
+    raid_view = View()
+    raid_view.add_item(raid_select)
+
+    await ctx.respond("Select a raid  :", view=raid_view, ephemeral=False)
 
 
 setup_commands(bot)

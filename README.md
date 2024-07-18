@@ -20,10 +20,11 @@ Welcome to the MEE7 Discord Bot command guide! Here are the commands for the MEE
     * [📺 add_streamer](#-add_streamer)
     * [🧹 cleanup](#-cleanup)
     * [📆 display_common_availability](#-display_common_availability)
-    * [📅 disponibilites](#-disponibilites)
+    * [📅 availability](#-availability)
     * [📢 recommend](#-recommend)
     * [📂 register_ical](#-register_ical)
     * [🎮 sb-ultras](#-sb-ultras)
+    * [⚔️ raids](#-raids)
     * [🥇 top10messages](#-top10messages)
     * [⚠️ warnings](#-warnings)
   * [Contributing 🤝](#contributing-)
@@ -48,13 +49,13 @@ Description: Displays the common availability of all users for the current week,
 
 - Usage: ```/display_common_availability```
 
-### 📅 disponibilites
+### 📅 availability
 Description: Displays the availabilities of all persons in the Discord server to facilitate scheduling and coordination.
-- Usage: ```/disponibilites```
+- Usage: ```/availability```
 
 ### 📢 recommend
 Description: Recommends content based on recent discussions to keep the community engaged with relevant topics.
-- Usage: ```/recommend```
+- Usage: ```/recommend <channel>```
 
 ### 📂 register_ical
 Description: Register your iCal file for availability checks to streamline event planning.
@@ -62,15 +63,20 @@ Description: Register your iCal file for availability checks to streamline event
 
 ### 🎮 sb-ultras
 Description: Displays the list of ultra abilities, providing information on special commands or features.
-- Usage: ```/sb-ultras```
+- Usage: ```/sb-ultras <?character>```
+
+### ⚔️ raids
+Description: Displays the list of raids, providing information on upcoming raids and events.
+- Usage: ```/raids```
+
 
 ### 🥇 top10messages
 Description: Displays the top 10 users who sent the most messages today, encouraging active participation.
-- Usage: ```/top10messages```
+- Usage: ```/top10messages <?include_bots>```
 
 ### ⚠️ warnings
 Description: Displays the warnings for a user or all users, helping to monitor and manage user behavior.
-- Usage: ```/warnings <user>```
+- Usage: ```/warnings <?user>```
 
 With these commands, you can effectively manage your Discord community, keep the environment tidy, facilitate scheduling, and engage users with relevant content and activities. Enjoy your time with MEE7! 🎉
 

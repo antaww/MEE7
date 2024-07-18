@@ -1,0 +1,32 @@
+https://www.next-stage.fr/wp-content/uploads/2022/03/Cerveau.png
+🌐 **The Confrontation Room**
+The room consists of 9 sections, each with a symbol above (💧Grief, ✋Stop, 🧠Brain, 🍷Drink, 🤝Commune, ⚔️Kill, 🎁Give, 🚪Enter, 🙏Adore), 3 Totems, and 3 Obelisks. The room is divided into 2 sides (🔺Pyramid and 🌌Traveler).
+
+👥 **Teams**
+Divide into 3 teams of 2, each with a 📖 reader and a 🏃‍♂️ runner.
+
+📍 **Totems**
+There are 3 Totems (⬅️Left, ⏺️Middle, ➡️Right) marked on the map. Each team takes one Totem.
+
+🏃‍♂️ **Runners**
+The left team’s runner will cover 💧Grief, ✋Stop, 🧠Brain rooms.
+The right team’s runner will cover 🍷Drink, 🤝Commune, ⚔️Kill rooms.
+The middle team’s runner will cover 🎁Give, 🚪Enter, 🙏Adore rooms.
+🎯 Start of the Confrontation
+The confrontation begins when a player shoots the Crux in the center (indicated by the 🔶 yellow diamond). Eliminate all enemies. Once all enemies are eliminated, the 📖 reading phase begins.
+
+📖 Reading Phase
+🔝 Top Symbol: Indicates which side the Possessed Knight appears on, either 🔺Pyramid or 🌌Traveler.
+
+If 🔺Pyramid is shown, there’s a Possessed Knight to kill on the Pyramid side (left and middle teams must find the Knight).
+If 🌌Traveler is shown, there’s a Possessed Knight to kill on the Traveler side (right and middle teams must find the Knight).
+🔲 Middle Symbol: Indicates the rooms the 🏃‍♂️ runner must go to. It can be one of the 9 room symbols (💧Grief, ✋Stop, 🧠Brain, 🍷Drink, 🤝Commune, ⚔️Kill, 🎁Give, 🚪Enter, 🙏Adore). Once revealed, the respective runner must find and enter the room with the corresponding symbol indicated by the totems.
+
+🔻 Bottom Symbol: Indicates which Chief to kill, either ☀️Light or 🌑Darkness. Inside the symbol room, it’s divided into two sides, ☀️Light and 🌑Darkness, with a Chief on each side. The defender outside near the Totems assists by indicating the bottom symbol to the 🏃‍♂️ runner. The runner then kills the Chief based on the symbol shown by the defender.
+
+If the bottom symbol is ☀️Light, the runner kills the Light side Chief.
+If the bottom symbol is 🌑Darkness, the runner kills the Darkness side Chief.
+🔫 Shooting Phase
+Once the 3 different symbols are obtained, each team heads to their respective obelisk. The obelisk will now show 9 symbols, 3 on each side (the obelisk has 3 sides). Each team must look at their obelisk and find the 3 symbols called by the 🏃‍♂️ runners during the 📖 reading phase (the symbols dropped by the dead chiefs). Only one obelisk will have the 3 corresponding symbols appearing on it (one on each side).
+
+Once the obelisk with the 3 matching symbols is found, it must be activated. To activate, shoot the 3 called symbols at the same time (within a 5-second window). Successfully activating the obelisk completes one phase of the confrontation. To finish this confrontation (which has 3 phases, 1 phase per obelisk), repeat this phase 2 more times, then you will receive your 🎉 loot.
