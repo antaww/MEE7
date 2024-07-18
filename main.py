@@ -15,6 +15,9 @@ from discord.ui import Select, View
 from dotenv import load_dotenv
 from loguru import logger
 from wordcloud import WordCloud
+import openpyxl
+from openpyxl.styles import Font
+
 
 from src.ft.bonus.squadbusters.navigation import NavigationView
 from src.ft.ft1.recommendations import generate_recommendations
@@ -68,11 +71,11 @@ async def handle_tasks():
     Each task is started by calling the `.start()` method on the respective `tasks.loop` instance. The `bot` instance is
     passed as an argument to `check_streamers.start()` to enable it to access Discord server information.
     """
-    scheduled_recommendation.start()
+    # scheduled_recommendation.start()
     check_streamers.start(bot)
     scheduled_update.start()
     scheduled_reports_save.start()
-    scheduled_activity_recommendation.start()
+    # scheduled_activity_recommendation.start()
 
 
 @tasks.loop(hours=24)
@@ -220,6 +223,30 @@ async def scheduled_report():
                 plt.close()
                 await message.reply(file=discord.File('warnings.png'))
                 os.remove('warnings.png')
+
+            # Create and send Excel report
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Daily Report"
+
+            # Set up the headers
+            headers = ["Date", "Sentiment", "Messages", "Participants", "Warnings"]
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col_num, value=header)
+                cell.font = Font(bold=True)
+
+            # Add the data
+            ws.cell(row=2, column=1, value=get_current_date_formatted(separator='/'))
+            ws.cell(row=2, column=2, value=sentiment)
+            ws.cell(row=2, column=3, value="\n".join(messages))
+            ws.cell(row=2, column=4, value=", ".join(unique_authors))
+            ws.cell(row=2, column=5, value=warnings_description)
+
+            # Save the Excel file
+            excel_file = "daily_report.xlsx"
+            wb.save(excel_file)
+            await message.reply(file=discord.File(excel_file))
+            os.remove(excel_file)
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
     finally:
